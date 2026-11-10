@@ -1,0 +1,21 @@
+:root { color-scheme: light; font-family: "Segoe UI", "Malgun Gothic", sans-serif; color: #172c3c; background: #eff3f7; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+.card { width: 100%; max-width: 440px; padding: 36px; border: 1px solid #d9e2ea; border-radius: 20px; background: white; box-shadow: 0 16px 48px #142e4b0c; }
+.brand { font-size: 12px; letter-spacing: .12em; font-weight: 700; color: #3666a3; }
+h1 { font-size: 28px; margin: 24px 0 10px; }
+.description, .hint { color: #526679; line-height: 1.65; }
+.hint { font-size: 12px; margin-top: 8px; }
+label { display: block; margin: 20px 0 8px; font-size: 14px; font-weight: 600; }
+input { width: 100%; padding: 13px 12px; font: inherit; border: 1px solid #b6c5d2; border-radius: 8px; }
+input:focus-visible, button:focus-visible { outline: 3px solid #92bbf6; outline-offset: 3px; }
+button { width: 100%; margin-top: 20px; padding: 13px; border: 0; border-radius: 8px; background: #245b9f; color: white; font: inherit; font-weight: 600; cursor: pointer; }
+button:hover { background: #1a487f; }
+button:disabled { opacity: .6; cursor: wait; }
+.secondary { margin-top: 12px; background: transparent; color: #245b9f; font-size: 14px; }
+.secondary:hover { background: #edf3fa; }
+#message { margin-bottom: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+#message[data-error="true"] { color: #ad2233; }
+#welcome { overflow-wrap: anywhere; }
+@media (max-width: 480px) { .card { padding: 24px; } body { padding: 16px; } }

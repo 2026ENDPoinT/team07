@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 | ENDPoinT Team 07</title>
+  <link rel="stylesheet" href="/css/auth.css">
+  <script type="module" src="/js/auth/login.js"></script>
+</head>
+<body>
+  <main class="card">
+    <p class="brand">ENDPoinT · TEAM 07</p>
+    <section id="guest">
+      <h1 id="title">로그인</h1>
+      <p class="description" id="description">계정으로 로그인해 주세요.</p>
+      <form id="auth-form">
+        <div id="name-field" hidden>
+          <label for="name">이름</label>
+          <input id="name" name="name" autocomplete="name" maxlength="50" disabled>
+        </div>
+        <label for="email">이메일</label>
+        <input id="email" name="email" type="email" autocomplete="username" maxlength="254" required>
+        <label for="password">비밀번호</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" minlength="15" maxlength="128" required aria-describedby="password-hint">
+        <p class="hint" id="password-hint">15~128자. 기억하기 쉬운 긴 문장도 사용할 수 있어요.</p>
+        <div id="confirm-field" hidden>
+          <label for="confirm">비밀번호 확인</label>
+          <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="15" maxlength="128" disabled>
+        </div>
+        <button id="submit" type="submit" disabled>로그인 상태 확인 중…</button>
+      </form>
+      <button id="switch-mode" class="secondary" type="button">계정이 없나요? 회원가입</button>
+    </section>
+    <section id="account" hidden>
+      <h1>로그인 완료</h1>
+      <p id="welcome"></p>
+      <p class="description">로그인 상태는 새로고침 후에도 유지됩니다.</p>
+      <button id="logout" type="button">로그아웃</button>
+    </section>
+    <p id="message" role="status" aria-live="polite"></p>
+    <noscript>로그인하려면 브라우저에서 JavaScript를 활성화해 주세요.</noscript>
+  </main>
+</body>
+</html>
