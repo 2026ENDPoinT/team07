@@ -39,6 +39,7 @@ export function renderSemesterGraph(container, courses, category = 'all') {
   svg.setAttribute('aria-label', `${{ all: '전체', major: '전공', general: '교양' }[category]} 학기별 평균평점 그래프`);
   svg.style.width = '100%';
   svg.style.minWidth = `${width}px`;
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   const add = (tag, attrs, content) => {
     const node = document.createElementNS(ns, tag);
     for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, String(value));
