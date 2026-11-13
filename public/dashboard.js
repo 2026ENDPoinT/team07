@@ -69,6 +69,14 @@ function formatNumber(value) {
     return Number.isFinite(value) ? String(value) : "--";
 }
 
+// 학기를 실제 시간순(1학기 → 여름 → 2학기 → 겨울)으로 정렬하기 위한 값입니다.
+function semesterOrder(semester) {
+    const match = /^(\d{4})-(1|여름|2|겨울)$/.exec(semester);
+    if (!match) return -1; // 예상하지 못한 형식의 학기는 목록 맨 아래로 보냅니다.
+    const order = { "1": 1, "여름": 2, "2": 3, "겨울": 4 };
+    return Number(match[1]) * 10 + order[match[2]];
+}
+
 // 학기 데이터의 화면 표시 형식
 function formatSemester(semester) {
     const match = semester?.match(/^(\d{4})-(1|2|여름|겨울)$/);
@@ -205,7 +213,7 @@ function refreshCourseSemesterFilter() {
                         semester.trim()
                 )
         )
-    ].sort((a, b) => b.localeCompare(a));
+    ].sort((a, b) => semesterOrder(b) - semesterOrder(a) || b.localeCompare(a));
 
     const allOption = document.createElement("option");
 

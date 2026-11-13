@@ -2,6 +2,14 @@
 const CATEGORIES = new Set(['all', 'major', 'general']);
 const GRADE_POINTS = { 'A+': 4.5, A0: 4, 'B+': 3.5, B0: 3, 'C+': 2.5, C0: 2, 'D+': 1.5, D0: 1, F: 0 };
 
+// 학기를 실제 시간순(1학기 → 여름 → 2학기 → 겨울)으로 정렬하기 위한 값입니다.
+function semesterOrder(semester) {
+    const match = /^(\d{4})-(1|여름|2|겨울)$/.exec(semester);
+    if (!match) return -1; // 예상하지 못한 형식의 학기는 목록 맨 아래로 보냅니다.
+    const order = { "1": 1, "여름": 2, "2": 3, "겨울": 4 };
+    return Number(match[1]) * 10 + order[match[2]];
+}
+
 // 유효한 이수 완료 과목을 학기별로 묶어 학점 가중 평균을 계산합니다.
 export function calculateSemesterGpa(courses, category = 'all') {
   if (!Array.isArray(courses)) throw new TypeError('과목 데이터는 배열이어야 합니다.');
@@ -10,7 +18,7 @@ export function calculateSemesterGpa(courses, category = 'all') {
   for (const course of courses) {
     if (!course || course.status !== 'completed') continue;
     if (category !== 'all' && course.category !== category) continue;
-    if (typeof course.semester !== 'string' || !/^\d{4}-[12]$/.test(course.semester)) continue;
+    if (typeof course.semester !== 'string' || !/^\d{4}-(1|2|여름|겨울)$/.test(course.semester)) continue;
     const credits = course.credits;
     const point = course.gradePoint == null || course.gradePoint === ''
       ? GRADE_POINTS[course.grade] : course.gradePoint;
@@ -22,7 +30,7 @@ export function calculateSemesterGpa(courses, category = 'all') {
     grouped.set(course.semester, item);
   }
   // 재수강 성적의 인정 방식은 학교별로 달라, 입력된 완료 과목을 모두 반영한다.
-  return [...grouped.values()].sort((a, b) => a.semester.localeCompare(b.semester))
+  return [...grouped.values()].sort((a, b) => semesterOrder(a.semester) - semesterOrder(b.semester))
     .map(({ semester, total, credits }) => ({ semester, gpa: Math.round((total / credits + Number.EPSILON) * 100) / 100, credits }));
 }
 
