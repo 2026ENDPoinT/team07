@@ -40,7 +40,6 @@ export function validateAcademicState(body) {
 
 // 사용자별 파일은 인증 DB 옆 전용 폴더에 보관합니다. 요청에서 파일 경로를 받지 않습니다.
 export function createAcademicStore(authDb, authDbPath) {
-  if (authDb.type === 'postgres') return createPostgresAcademicStore(authDb);
   const inMemory = authDbPath === ':memory:';
   const folder = inMemory ? null : join(dirname(resolve(authDbPath)), 'users');
   const memoryDatabases = new Map();
@@ -95,27 +94,5 @@ export function createAcademicStore(authDb, authDbPath) {
       });
     },
     close() { for (const db of memoryDatabases.values()) db.close(); memoryDatabases.clear(); }
-  };
-}
-
-function createPostgresAcademicStore(db) {
-  const stateOf = row => row
-    ? { courses: row.courses, profile: { grade: row.current_year }, revision: Number(row.revision) }
-    : { courses: [], profile: { grade: 1 }, revision: 0 };
-  return {
-    async read(userId) {
-      const { rows } = await db.query('SELECT courses, current_year, revision FROM app_private.academic_state WHERE user_id = $1', [userId]);
-      return stateOf(rows[0]);
-    },
-    async write(userId, state) {
-      await db.query('INSERT INTO app_private.academic_state(user_id) VALUES ($1) ON CONFLICT(user_id) DO NOTHING', [userId]);
-      // 사용자 조건과 버전 비교를 같은 UPDATE에 넣어 다른 계정 접근 및 동시 덮어쓰기를 막습니다.
-      const { rows } = await db.query(`UPDATE app_private.academic_state SET courses = $2::jsonb, current_year = $3, revision = revision + 1
-        WHERE user_id = $1 AND revision = $4 RETURNING courses, current_year, revision`,
-      [userId, JSON.stringify(state.courses), state.profile.grade, state.revision]);
-      if (!rows.length) throw fail(409, '다른 화면에서 데이터가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.');
-      return stateOf(rows[0]);
-    },
-    close() {}
   };
 }
