@@ -26,7 +26,7 @@ export function validateAcademicState(body) {
         typeof course.semester !== 'string' || !/^\d{4}-(1|2|여름|겨울)$/.test(course.semester) ||
         !CATEGORIES.includes(course.category) || !STATUSES.includes(course.status) || typeof course.isRetake !== 'boolean' ||
         (course.status === 'completed' && (typeof course.grade !== 'string' || !Object.hasOwn(GRADE_POINTS, course.grade)))) {
-      throw fail(400, '과목 입력값을 확인해 주세요. 학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식이며 학점은 1~12 사이의 정수여야 합니다.');
+      throw fail(400, '과목 입력값을 확인해 주세요. 학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울이며 학점은 1~12 사이의 정수여야 합니다.');
     }
     ids.add(course.id);
     // 평점은 요청의 gradePoint를 신뢰하지 않고 성적 등급으로 계산합니다.
@@ -40,6 +40,7 @@ export function validateAcademicState(body) {
 
 // 사용자별 파일은 인증 DB 옆 전용 폴더에 보관합니다. 요청에서 파일 경로를 받지 않습니다.
 export function createAcademicStore(authDb, authDbPath) {
+  if (authDb.type === 'postgres') return createPostgresAcademicStore(authDb);
   const inMemory = authDbPath === ':memory:';
   const folder = inMemory ? null : join(dirname(resolve(authDbPath)), 'users');
   const memoryDatabases = new Map();
@@ -74,6 +75,11 @@ export function createAcademicStore(authDb, authDbPath) {
       db.prepare('INSERT OR IGNORE INTO academic_state(singleton, storage_key) VALUES (1, ?)').run(key);
       const row = db.prepare('SELECT * FROM academic_state WHERE singleton = 1').get();
       if (row.storage_key !== key) throw new Error('User database identity mismatch.');
+      db.exec(`CREATE TABLE IF NOT EXISTS calendar_state (
+        singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+        events TEXT NOT NULL DEFAULT '[]',
+        revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0)
+      ); INSERT OR IGNORE INTO calendar_state(singleton) VALUES (1);`);
       return task(db, row);
     } finally {
       // 디스크 DB는 요청마다 닫아 가입자 수만큼 파일 핸들이 누적되지 않게 합니다.
@@ -84,6 +90,20 @@ export function createAcademicStore(authDb, authDbPath) {
   const stateOf = row => ({ courses: JSON.parse(row.courses), profile: { grade: row.current_year }, revision: row.revision });
   return {
     read(userId) { return withDatabase(userId, (_db, row) => stateOf(row)); },
+    readCalendar(userId) {
+      return withDatabase(userId, db => {
+        const row = db.prepare('SELECT events, revision FROM calendar_state WHERE singleton = 1').get();
+        return { events: JSON.parse(row.events), revision: row.revision };
+      });
+    },
+    writeCalendar(userId, state) {
+      return withDatabase(userId, db => {
+        const result = db.prepare(`UPDATE calendar_state SET events = ?, revision = revision + 1
+          WHERE singleton = 1 AND revision = ?`).run(JSON.stringify(state.events), state.revision);
+        if (!result.changes) throw fail(409, '다른 화면에서 일정이 변경되었습니다. 최신 일정을 불러온 뒤 다시 시도해 주세요.');
+        return { ...state, revision: state.revision + 1 };
+      });
+    },
     write(userId, state) {
       return withDatabase(userId, db => {
         // 버전 비교와 저장을 하나의 SQL 문장으로 처리해 다른 탭의 변경을 덮어쓰지 않습니다.
@@ -94,5 +114,39 @@ export function createAcademicStore(authDb, authDbPath) {
       });
     },
     close() { for (const db of memoryDatabases.values()) db.close(); memoryDatabases.clear(); }
+  };
+}
+
+function createPostgresAcademicStore(db) {
+  const calendarOf = row => row ? { events: row.events, revision: Number(row.revision) } : { events: [], revision: 0 };
+  const stateOf = row => row
+    ? { courses: row.courses, profile: { grade: row.current_year }, revision: Number(row.revision) }
+    : { courses: [], profile: { grade: 1 }, revision: 0 };
+  return {
+    async readCalendar(userId) {
+      const { rows } = await db.query('SELECT events, revision FROM app_private.calendar_state WHERE user_id = $1', [userId]);
+      return calendarOf(rows[0]);
+    },
+    async writeCalendar(userId, state) {
+      await db.query('INSERT INTO app_private.calendar_state(user_id) VALUES ($1) ON CONFLICT(user_id) DO NOTHING', [userId]);
+      const { rows } = await db.query(`UPDATE app_private.calendar_state SET events = $2::jsonb, revision = revision + 1
+        WHERE user_id = $1 AND revision = $3 RETURNING events, revision`, [userId, JSON.stringify(state.events), state.revision]);
+      if (!rows.length) throw fail(409, '다른 화면에서 일정이 변경되었습니다. 최신 일정을 불러온 뒤 다시 시도해 주세요.');
+      return calendarOf(rows[0]);
+    },
+    async read(userId) {
+      const { rows } = await db.query('SELECT courses, current_year, revision FROM app_private.academic_state WHERE user_id = $1', [userId]);
+      return stateOf(rows[0]);
+    },
+    async write(userId, state) {
+      await db.query('INSERT INTO app_private.academic_state(user_id) VALUES ($1) ON CONFLICT(user_id) DO NOTHING', [userId]);
+      // 사용자 조건과 버전 비교를 같은 UPDATE에 넣어 다른 계정 접근 및 동시 덮어쓰기를 막습니다.
+      const { rows } = await db.query(`UPDATE app_private.academic_state SET courses = $2::jsonb, current_year = $3, revision = revision + 1
+        WHERE user_id = $1 AND revision = $4 RETURNING courses, current_year, revision`,
+      [userId, JSON.stringify(state.courses), state.profile.grade, state.revision]);
+      if (!rows.length) throw fail(409, '다른 화면에서 데이터가 변경되었습니다. 새로고침한 뒤 다시 시도해 주세요.');
+      return stateOf(rows[0]);
+    },
+    close() {}
   };
 }

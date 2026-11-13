@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, unlinkSync, rmdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import { createApp } from '../server/app.js';
 import { addCourse, updateCourse, removeCourse } from '../js/grades/grades.js';
+import { launch as launchHttp } from './http-helper.js';
+import { calculateSemesterGpa } from '../js/graph/gradeGraph.js';
 
 const origin = 'http://localhost:3000';
 const password = 'long-enough-password-2026';
@@ -14,21 +15,30 @@ const course = (overrides = {}) => ({
   semester: '2026-1', category: 'major', status: 'completed', isRetake: false, ...overrides
 });
 
+function removeFixture(folder) {
+  for (const entry of readdirSync(folder, { withFileTypes: true })) {
+    const path = join(folder, entry.name);
+    if (entry.isDirectory()) {
+      for (const file of readdirSync(path)) unlinkSync(join(path, file));
+      rmdirSync(path);
+    } else unlinkSync(path);
+  }
+  rmdirSync(folder);
+}
+
 async function launch(dbPath) {
-  const { app, db } = await createApp({ dbPath, origin });
-  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${app.address().port}`;
+  const service = await launchHttp(dbPath);
   return {
-    db,
+    db: service.db,
     async request(path, { method = 'GET', cookie, body, accountId, requestOrigin = origin } = {}) {
       const headers = { Origin: requestOrigin, ...(cookie ? { Cookie: cookie } : {}),
         ...(accountId === undefined ? {} : { 'X-Account-Id': String(accountId) }),
         ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) };
-      const res = await fetch(base + path, { method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+      const res = await service.request(path, body, cookie, requestOrigin, { method, headers });
       return { status: res.status, cookie: res.headers.get('set-cookie')?.split(';')[0],
         data: await res.json(), headers: res.headers };
     },
-    async stop() { await new Promise(resolve => app.close(resolve)); await db.close(); }
+    stop: () => service.close()
   };
 }
 
@@ -41,7 +51,14 @@ const acad = (s, user, body) => s.request('/api/academic', {
   method: body === undefined ? 'GET' : 'PUT', cookie: user.cookie, accountId: user.id, body
 });
 
-test('Supabase-compatible user_courses: latest academic API adds/edits/deletes, keeps grades and revision per account', async () => {
+test('seasonal semesters sort chronologically in GPA graphs', () => {
+  const semesters = ['2027-1', '2026-겨울', '2026-2', '2026-여름', '2026-1'];
+  const rows = calculateSemesterGpa(semesters.map((semester, index) => course({ id: `season-${index}`, semester })));
+  assert.deepEqual(rows.map(row => row.semester), [...semesters].reverse());
+  assert.ok(rows.every(row => row.gpa === 4.5));
+});
+
+test('merged academic API adds/edits/deletes seasonal courses and keeps grades and revision per account', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'team07-integration-'));
   const dbPath = join(folder, 'db.sqlite');
   let s = await launch(dbPath);
@@ -75,16 +92,20 @@ test('Supabase-compatible user_courses: latest academic API adds/edits/deletes, 
     assert.equal(removed.status, 200);
     assert.equal(removed.data.courses.length, 1);
     assert.equal((await s.request('/api/courses', { cookie: a.cookie })).data.courses.length, 1);
-    const legacy = s.db.prepare('SELECT courses_json, current_year, revision FROM user_courses WHERE user_id=?').get(a.id);
-    assert.equal(JSON.parse(legacy.courses_json).length, 1);
-    assert.equal(legacy.current_year, 2);
-    assert.equal(legacy.revision, 4);
+    const { storage_key: key } = s.db.prepare('SELECT storage_key FROM user_databases WHERE user_id=?').get(a.id);
+    const personalDb = new DatabaseSync(join(folder, 'users', `${key}.db`), { readOnly: true });
+    try {
+      const stored = personalDb.prepare('SELECT courses, current_year, revision FROM academic_state').get();
+      assert.equal(JSON.parse(stored.courses).length, 1);
+      assert.equal(stored.current_year, 2);
+      assert.equal(stored.revision, 4);
+    } finally { personalDb.close(); }
     await s.stop();
     s = await launch(dbPath);
     assert.equal((await acad(s, a)).data.revision, 4);
     assert.equal((await acad(s, a)).data.courses[0].semester, '2026-여름');
     assert.deepEqual((await acad(s, b)).data.courses, []);
-  } finally { await s.stop(); rmSync(folder, { recursive: true, force: true }); }
+  } finally { await s.stop(); removeFixture(folder); }
 });
 
 test('old external-base SQLite user_courses rows automatically gain year/revision and keep saved courses', async () => {
@@ -104,20 +125,18 @@ test('old external-base SQLite user_courses rows automatically gain year/revisio
     assert.equal(JSON.parse(row.courses_json)[0].courseName, '자료구조');
     assert.equal(row.current_year, 1);
     assert.equal(row.revision, 0);
-  } finally { await s.stop(); rmSync(folder, { recursive: true, force: true }); }
+  } finally { await s.stop(); removeFixture(folder); }
 });
 
 test('newest HTML & modules are reachable through server route map', async () => {
-  const { app, db } = await createApp({ dbPath: ':memory:', origin });
-  await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
-  const base = `http://127.0.0.1:${app.address().port}`;
+  const service = await launchHttp(':memory:');
   try {
-    const html = await (await fetch(base + '/index.html')).text();
+    const html = await (await service.request('/index.html')).text();
     assert.match(html, /graduation-total-remaining/);
     assert.match(html, /2026-여름/);
     for (const path of ['/js/academic-api.js', '/js/credits/graduation.js', '/js/dashboard.js', '/js/grade-analysis.js']) {
-      assert.equal((await fetch(base + path)).status, 200, path);
+      assert.equal((await service.request(path)).status, 200, path);
     }
-    assert.equal((await fetch(base + '/server/schema.postgres.sql')).status, 404);
-  } finally { await new Promise(resolve => app.close(resolve)); await db.close(); }
+    assert.equal((await service.request('/server/schema.postgres.sql')).status, 404);
+  } finally { await service.close(); }
 });

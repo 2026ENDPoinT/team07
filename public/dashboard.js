@@ -297,7 +297,7 @@ async function changeCurrentYear() {
 function refreshDashboard() {
     elements.dataSource.textContent =
         `내 계정에 저장된 과목 · 현재 학년: ${userInfo.grade}학년. ` +
-        "과목과 학년은 계정별로 저장됩니다. 수료·졸업 기준은 예시입니다.";
+        "과목과 학년은 계정별로 저장됩니다.";
 
     const currentCredits = calculateCurrentCredits(courses);
     const earnedCredits = calculateEarnedCredits(courses);

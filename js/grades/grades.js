@@ -52,12 +52,10 @@ export function createCourse({
 
   if (!courseName) throw new Error("과목명을 입력해 주세요.");
   if (!SEMESTER_PATTERN.test(semester)) {
-  throw new Error(
-        "학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식으로 입력해 주세요."
-    );
+    throw new Error("학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식으로 입력해 주세요.");
   }
   if (!Number.isInteger(credits) || credits < 1 || credits > 12) {
-      throw new Error("학점은 1~12 사이의 정수로 입력해 주세요.");
+    throw new Error("학점은 1~12 사이의 정수로 입력해 주세요.");
   }
   if (!CATEGORIES.includes(category)) {
     throw new Error("이수 구분은 " + CATEGORIES.join(", ") + " 중 하나여야 해요.");
