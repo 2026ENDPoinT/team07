@@ -325,10 +325,16 @@ function renderFilteredCourses() {
         semester: semester || undefined
     });
 
-    renderCourses(filtered);
+    // 전체 학기 및 개별 학기 모두 최신 학기부터 표시합니다.
+    // 원본 courses 배열은 변경하지 않아 DB 저장 순서에 영향을 주지 않습니다.
+    const sortedCourses = [...filtered].sort(
+        (a, b) => semesterOrder(b.semester) - semesterOrder(a.semester)
+    );
+
+    renderCourses(sortedCourses);
 
     elements.courseCount.textContent =
-        `${semester ? `${formatSemester(semester)} · ` : "전체 "}${filtered.length}개 과목`;
+        `${semester ? `${formatSemester(semester)} · ` : "전체 "}${sortedCourses.length}개 과목`;
 }
 
 // 대시보드 요약 정보 갱신
