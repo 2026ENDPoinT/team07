@@ -24,11 +24,12 @@
 <label for="email">이메일</label>
 <input autocomplete="username" id="email" maxlength="254" name="email" required="" type="email"/>
 <label for="password">비밀번호</label>
-<input aria-describedby="password-hint" autocomplete="current-password" id="password" maxlength="128" minlength="15" name="password" required="" type="password"/>
-<p class="hint" id="password-hint">15~128자. 기억하기 쉬운 긴 문장도 사용할 수 있어요.</p>
+<input aria-describedby="password-hint" autocomplete="current-password" id="password" maxlength="128" minlength="1" name="password" required="" type="password"/>
+<p aria-live="polite" class="hint" id="password-hint" role="status"></p>
 <div hidden="" id="confirm-field">
 <label for="confirm">비밀번호 확인</label>
-<input autocomplete="new-password" disabled="" id="confirm" maxlength="128" minlength="15" name="confirm" type="password"/>
+<input aria-describedby="confirm-hint" autocomplete="new-password" disabled="" id="confirm" maxlength="20" minlength="8" name="confirm" type="password"/>
+<p aria-live="polite" class="hint" id="confirm-hint" role="status"></p>
 </div>
 <button disabled="" id="submit" type="submit">로그인 상태 확인 중…</button>
 </form>
