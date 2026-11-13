@@ -21,7 +21,7 @@ export const GRADE_POINTS = {
   "B+": 3.5, "B0": 3.0,
   "C+": 2.5, "C0": 2.0,
   "D+": 1.5, "D0": 1.0,
-  "F": 0,
+  "F": 0, "P" : null , "NP" : null
 };
 
 export const CATEGORIES = ["major", "double_major", "minor", "general"];
