@@ -63,9 +63,6 @@ export function createCourse({
   if (!STATUSES.includes(status)) {
     throw new Error("수강 상태는 " + STATUSES.join(", ") + " 중 하나여야 해요.");
   }
-  if (typeof isRetake !== "boolean") {
-    throw new Error("재수강 여부는 Boolean 값이어야 해요.");
-  }
 
   let point = null; // 수강 중인 과목은 아직 평점이 없음
   if (status === "in_progress") {
@@ -78,12 +75,6 @@ export function createCourse({
     point = given ? GRADE_POINTS[grade] : Number(gradePoint);
     if (!Number.isFinite(point) || point < 0 || point > 4.5) {
       throw new Error("평점은 0 이상 4.5 이하의 숫자여야 해요.");
-    }
-    if (isRetake && GRADE_POINTS[grade] > GRADE_POINTS["A0"]) {
-       throw new Error("재수강 과목의 최대 성적은 A0입니다.");
-    }
-    if (isRetake && point > GRADE_POINTS["A0"]) {
-       throw new Error("재수강 과목의 평점은 4.0 이하만 허용됩니다.");
     }
   }
 
@@ -98,83 +89,6 @@ export function createCourse({
     category,
     isRetake: Boolean(isRetake),
   };
-}
-
-// 학기별 순서를 숫자로 변환
-function getSemesterOrder(semester) {
-  const match = semester.match(/^(\d{4})-(1|2|여름|겨울)$/);
-
-  if (!match) {
-    throw new Error("올바르지 않은 학기 형식입니다.");
-  }
-
-  const year = Number(match[1]);
-
-  const termOrder = {
-    "1": 1,
-    "여름": 2,
-    "2": 3,
-    "겨울": 4,
-  };
-
-  return year * 10 + termOrder[match[2]];
-}
-
-
-// 동일 과목명의 수강 기록 중 가장 최근 기록을 반환
-export function getLatestCourse(courses, courseName) {
-  const matchedCourses = courses.filter(
-    course => course.courseName === courseName
-  );
-
-  if (matchedCourses.length === 0) {
-    return null;
-  }
-
-  return matchedCourses.reduce((latest, current) => {
-    return getSemesterOrder(current.semester) >
-      getSemesterOrder(latest.semester)
-      ? current
-      : latest;
-  });
-}
-
-
-// 재수강 이전 기록을 제외하고 최신 수강 기록만 반환
-export function getEffectiveCourses(courses) {
-  const courseGroups = new Map();
-
-  for (const course of courses) {
-    if (!courseGroups.has(course.courseName)) {
-      courseGroups.set(course.courseName, []);
-    }
-
-    courseGroups.get(course.courseName).push(course);
-  }
-
-  const effectiveCourses = [];
-
-  for (const group of courseGroups.values()) {
-    const hasRetake = group.some(course => course.isRetake);
-
-    // 재수강 기록이 없다면 기존 과목을 그대로 유지
-    if (!hasRetake) {
-      effectiveCourses.push(...group);
-      continue;
-    }
-
-    // 재수강 기록이 있다면 가장 최근 기록 하나만 유지
-    const latestCourse = group.reduce((latest, current) => {
-      return getSemesterOrder(current.semester) >
-        getSemesterOrder(latest.semester)
-        ? current
-        : latest;
-    });
-
-    effectiveCourses.push(latestCourse);
-  }
-
-  return effectiveCourses;
 }
 
 // 과목 하나를 추가한 새 배열을 돌려주기.
@@ -221,14 +135,12 @@ export function getCourses(courses, { category = "all", semester, keyword, statu
 //   - F는 평점 계산에는 들어가지만 취득 학점(earnedCredits)에는 안 들어감.
 //   - 재수강 과목 처리 규칙은 아직 정해지지 않아서 지금은 일반 과목과 똑같이 계산.
 export function summarize(courses) {
-  const effectiveCourses = getEffectiveCourses(courses);
-
   let totalCredits = 0;
   let earnedCredits = 0;
   let inProgressCredits = 0;
   let weightedSum = 0;
 
-  for (const c of effectiveCourses) {
+  for (const c of courses) {
     if (c.status === "in_progress") {
       inProgressCredits += c.credits;
       continue;
@@ -240,7 +152,7 @@ export function summarize(courses) {
 
   const gpa = totalCredits === 0 ? 0 : weightedSum / totalCredits;
   return {
-    count: effectiveCourses.length,
+    count: courses.length,
     totalCredits,
     earnedCredits,
     inProgressCredits,

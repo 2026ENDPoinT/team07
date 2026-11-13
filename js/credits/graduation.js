@@ -1,5 +1,3 @@
-import { getEffectiveCourses } from "../grades/grades.js";
-
 //졸업까지 남은 학점을 계산하는 스크립트
 //@param {Array} courses 과목 데이터 배열
 //@param {Object} academicRequirements 졸업 기준 데이터
@@ -10,9 +8,6 @@ export function calculateGraduationCredits(courses, academicRequirements) {
     if (!Array.isArray(courses)) {
         throw new TypeError("과목 데이터는 배열이어야 합니다.");
     }
-
-    // 재수강 이전 기록 제외
-    const effectiveCourses = getEffectiveCourses(courses);
 
     //데이터가 없거나 || "odject"가 아니거나 || gradution이 없으면 throw
     if (
@@ -39,7 +34,7 @@ export function calculateGraduationCredits(courses, academicRequirements) {
 
     // 취득 완료 및 수강 중 과목의 학점을 합산
     // 단, 취득 완료 과목 중 F는 제외
-    const validCourses = effectiveCourses.filter(course =>
+    const validCourses = courses.filter(course =>
         course.status === "in_progress" ||
         (course.status === "completed" && course.grade !== "F")
     );
