@@ -26,6 +26,8 @@ export const GRADE_POINTS = {
 
 export const CATEGORIES = ["major", "double_major", "minor", "general"];
 export const STATUSES = ["completed", "in_progress"];
+
+// ^ : 문자열 시작 $ 문자열의 끝 /.../ 정규식 리터럴 : 정규식 - 규칙에 맞는 데이터만 골라내거나 바꿀 때 쓰는 도구
 const SEMESTER_PATTERN = /^\d{4}-(1|2|여름|겨울)$/;
 
 // 화면에 보여줄 한글 이름
@@ -34,10 +36,18 @@ export const CATEGORY_LABELS = { major: "전공", double_major: "복수전공", 
 // 저장소 이전 데이터에는 gradePoint가 누락되거나 문자열로 저장되어 있을 수 있습니다.
 // P/NP는 이수 완료여도 GPA에서 제외하며, 기존 숫자 평점은 유지합니다.
 export function resolveGpaGradePoint(course) {
+  // ? 옵셔널 체이닝 : course가 0이거나 unidefined여도 grade 접근 >> 이 다음 줄에서 에러 발생 방지
   const grade = course?.grade;
+
   if (grade === 'P' || grade === 'NP') return null;
 
+
   const raw = course?.gradePoint;
+
+  // 데이터 누락 / 미정의 / 빈 문자열 / 공백 문자열 이면...
+  // .trim 공백 제거
+  // >> 만일 raw가 비어있더라도 문자 환산표 기준 대응 값이 있으면 평점 반환 (why 누락 됐을 수 있는 숫자 평점을 마주할 때 문자 성적을 이용해 에러를 방지)
+  //   >> 아니면 throw 
   if (raw === null || raw === undefined || raw === '' ||
       (typeof raw === 'string' && raw.trim() === '')) {
     if (Object.hasOwn(GRADE_POINTS, grade)) return GRADE_POINTS[grade];
@@ -49,6 +59,7 @@ export function resolveGpaGradePoint(course) {
   if (!Number.isFinite(point) || point < 0 || point > 4.5) {
     throw new TypeError('성적 평점 데이터가 올바르지 않습니다.');
   }
+
   return point;
 }
 
@@ -66,12 +77,14 @@ export function createCourse({
   category,
   isRetake = false,
 }) {
+  // ?? : 널 병합 연산자 >> 왼쪽 피연산자가 Null or undefined 오른쪽 피연산자 반환 아니면 왼쪽 그대로 반환
   courseName = String(courseName ?? "").trim();
   semester = String(semester ?? "").trim(); // 예: "2026-1"
   credits = Number(credits);
   grade = String(grade ?? "").trim().toUpperCase();
 
   if (!courseName) throw new Error("과목명을 입력해 주세요.");
+  //.test : 정규식 형태와 일치하는지 확인
   if (!SEMESTER_PATTERN.test(semester)) {
     throw new Error("학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식으로 입력해 주세요.");
   }
@@ -111,6 +124,8 @@ export function createCourse({
   }
 
   return {
+    //node.js 실행 환경에 무관하게 전역객체에 접근
+    //crypto?.randomUUID?.() 보안 표준
     id: globalThis.crypto?.randomUUID?.() ?? String(Date.now()),
     courseName,
     credits,
@@ -131,6 +146,8 @@ function getSemesterOrder(semester) {
     throw new Error("올바르지 않은 학기 형식입니다.");
   }
 
+  //match() | 0 : 전체, 1 첫 번째, 2 : 두 번째 ....
+
   const year = Number(match[1]);
 
   const termOrder = {
@@ -140,7 +157,7 @@ function getSemesterOrder(semester) {
     "겨울": 4,
   };
 
-  return year * 10 + termOrder[match[2]];
+  return year * 10 + termOrder[match[2]]; //ex > 20261
 }
 
 
