@@ -1,9 +1,9 @@
 
-import { calculateCurrentCredits } from "./credits/current.js";
-import { calculateEarnedCredits } from "./credits/earned.js";
-import { calculateCompletionCredits } from "./credits/completion.js";
-import { calculateCumulativeGPA } from "./grades/gpa.js";
-import { loadCourses } from "./grades/grades.js";
+import { calculateCurrentCredits } from "/js/credits/current.js";
+import { calculateEarnedCredits } from "/js/credits/earned.js";
+import { calculateCompletionCredits } from "/js/credits/completion.js";
+import { calculateCumulativeGPA } from "/js/grades/gpa.js";
+import { loadCourses } from "/js/grades/grades.js";
 
 const elements = {
     userName: document.querySelector("#user-name"),
@@ -43,6 +43,17 @@ async function loadAcademicRequirements() {
 
     if (!response.ok) {
         throw new Error("학업 기준 데이터를 불러오지 못했습니다.");
+    }
+
+    return response.json();
+}
+
+// 사용자 정보 불러오기
+async function loadUserInfo() {
+    const response = await fetch("/data/user_info.json");
+
+    if (!response.ok) {
+        throw new Error("사용자 정보를 불러오지 못했습니다.");
     }
 
     return response.json();
@@ -88,7 +99,7 @@ function renderCourses(courses) {
 }
 
 // 대시보드 요약 정보 갱신
-async function renderDashboard(user) {
+async function renderDashboard(userInfo) {
     const [courses, academicRequirements] = await Promise.all([
         Promise.resolve(loadCourses()),
         loadAcademicRequirements()
@@ -102,7 +113,7 @@ async function renderDashboard(user) {
     const earnedCredits = calculateEarnedCredits(courses);
     const gpaResult = calculateCumulativeGPA(courses);
 
-    const targetYear = Number(user.grade);
+    const targetYear = Number(userInfo.grade);
 
     const completionCredits = calculateCompletionCredits(
         earnedCredits,
@@ -111,9 +122,7 @@ async function renderDashboard(user) {
     );
 
     elements.userName.textContent =
-        user.department
-            ? `${user.department} ${targetYear}학년`
-            : "사용자";
+        `${userInfo.department} ${targetYear}학년`;
 
     elements.cumulativeGpa.textContent =
         gpaResult.gpa === null
@@ -157,13 +166,17 @@ async function initDashboard() {
 
         if (!user) return;
 
-        await renderDashboard(user);
+        const userInfo = await loadUserInfo();
+
+        await renderDashboard(userInfo);
     } catch (error) {
         elements.message.textContent =
             `대시보드 초기화 실패: ${error.message}`;
     }
 }
 
+// 로그아웃 이벤트 등록
 elements.logoutButton.addEventListener("click", logout);
 
+// 대시보드 실행
 initDashboard();
