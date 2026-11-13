@@ -30,7 +30,7 @@ test('profile updates validate both passwords, reject duplicates, isolate accoun
     const expected = await verifyProfileFlow(service);
     await service.close();
     service = await launch(path);
-    const relogin = await service.request('/api/auth/login', { email: expected.email, password: 'updated-test-password-2026' });
+    const relogin = await service.request('/api/auth/login', { email: expected.email, password: 'Bb2@changed2026' });
     assert.equal(relogin.status, 200);
     assert.deepEqual((await relogin.json()).user, expected);
     for (const path of ['/mypage.html', '/css/mypage.css', '/js/mypage.js']) {

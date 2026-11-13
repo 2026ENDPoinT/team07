@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword } from '../server/password.js';
 import { launch } from './http-helper.js';
 
 const origin = 'http://localhost:3000';
-const password = 'a-long-test-password-2026';
+const password = 'Aa1!test2026';
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
 
 const exampleCourse = (overrides = {}) => ({ id: 'course-1', courseName: '자료구조', credits: 3,

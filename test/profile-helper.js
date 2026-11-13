@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
-const password = 'original-test-password-2026';
-const nextPassword = 'updated-test-password-2026';
+const password = 'Aa1!test2026';
+const nextPassword = 'Bb2@changed2026';
 const origin = 'http://localhost:3000';
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
 

@@ -1,4 +1,5 @@
 import { authRequest } from '/js/auth/api.js';
+import { getPasswordErrors } from '/js/auth/password-policy.js';
 
 const $ = id => document.getElementById(id);
 let savedUser;
@@ -40,13 +41,13 @@ function validatePasswords() {
     $('password-match').textContent = mismatch ? '비밀번호 확인이 일치하지 않습니다.' : password ? '비밀번호가 일치합니다.' : '';
     $('password-match').dataset.error = String(mismatch);
     const strength = $('password-strength');
-    strength.textContent = !password ? '' : password.length < 15
-        ? `15자 이상 입력해 주세요. (현재 ${password.length}자)`
-        : password.length < 20 ? '길이 기준 충족 · 20자 이상의 긴 암호문도 추천합니다.'
-        : '긴 비밀번호입니다. 다른 사이트에서 사용한 암호는 피하세요.';
-    strength.dataset.error = String(Boolean(password && password.length < 15));
+    // 비밀번호 미변경(빈 입력)은 정상입니다. 변경 요청 때만 신규 정책을 확인합니다.
+    const errors = password ? getPasswordErrors(password) : [];
+    strength.textContent = !password ? '' : errors.length ? errors.join('\n') : '모든 비밀번호 조건을 충족했습니다.';
+    strength.dataset.error = String(Boolean(errors.length));
+    $('password').setAttribute('aria-invalid', String(Boolean(errors.length)));
     syncCredentialRequirement();
-    return !mismatch;
+    return !mismatch && errors.length === 0;
 }
 
 function syncCredentialRequirement() {
@@ -115,8 +116,8 @@ $('profile-form').addEventListener('submit', async event => {
     if (pending || !savedUser) return;
     syncMajorFields();
     if (!validatePasswords() || !$('profile-form').reportValidity()) {
-        message('입력 내용을 확인해 주세요. 비밀번호는 두 칸이 일치해야 합니다.', true);
-        $('password-confirm').reportValidity();
+        message('비밀번호 조건과 두 입력값의 일치 여부를 확인해 주세요.', true);
+        $('profile-form').reportValidity();
         return;
     }
     busy(true);

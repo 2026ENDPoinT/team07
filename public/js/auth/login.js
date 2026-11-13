@@ -1,4 +1,5 @@
 import { authRequest } from './api.js';
+import { getPasswordErrors } from './password-policy.js';
 
 const $ = id => document.getElementById(id);
 let signup = false;
@@ -34,6 +35,13 @@ $('switch-mode').addEventListener('click', () => {
     $(input).required = signup;
   }
   $('password').autocomplete = signup ? 'new-password' : 'current-password';
+  $('password').minLength = 8;
+  $('password').maxLength = signup ? 20 : 128; // 이전 가입자의 긴 비밀번호로도 로그인 가능
+  $('confirm').minLength = 8;
+  $('confirm').maxLength = 20;
+  $('password-hint').textContent = signup
+    ? '8~20자 · 대문자·소문자·숫자·허용 특수문자를 각각 1개 이상 포함하고 공백은 사용할 수 없습니다.'
+    : '가입할 때 설정한 비밀번호를 입력해 주세요. 기존 비밀번호도 계속 사용할 수 있습니다.';
   $('password').value = '';
   $('confirm').value = '';
   $('title').textContent = signup ? '반가워요, 함께 시작해요' : '다시 만나 반가워요';
@@ -43,22 +51,29 @@ $('switch-mode').addEventListener('click', () => {
   updatePasswordAdvice();
   message('');
 });
-// 회원가입에서만 비밀번호 길이 안내를 보여줍니다. 기존 계정 로그인은 검사 기준을 바꾸지 않습니다.
+// 가입 시 충족하지 못한 조건만 안내합니다. 비밀번호 원문은 화면·로그에 출력하지 않습니다.
 function updatePasswordAdvice() {
-  const password = $('password').value;
   const hint = $('signup-password-security');
   hint.hidden = !signup;
-  hint.textContent = !password ? '새 비밀번호는 15자 이상으로 설정해 주세요.'
-    : password.length < 15 ? `15자 이상 필요합니다. (현재 ${password.length}자)`
-    : password.length < 20 ? '길이 조건을 충족했습니다. 다른 사이트에서 사용하지 않은 비밀번호를 추천합니다.'
-    : '긴 비밀번호입니다. 다른 사이트와 중복 사용하지 마세요.';
-  hint.dataset.error = String(Boolean(password && password.length < 15));
+  const password = $('password').value;
+  const errors = signup && password ? getPasswordErrors(password) : [];
+  hint.textContent = !signup ? '' : !password
+    ? '영문 대문자·소문자·숫자·특수문자를 포함한 8~20자로 설정해 주세요.'
+    : errors.length ? errors.join('\n') : '모든 비밀번호 조건을 충족했습니다.';
+  hint.dataset.error = String(Boolean(errors.length));
+  $('password').setAttribute('aria-invalid', String(Boolean(errors.length)));
+  return errors;
 }
 $('password').addEventListener('input', updatePasswordAdvice);
 
 // 비밀번호 확인 후 로그인 또는 회원가입 API를 호출하고 결과를 화면에 반영합니다.
 $('auth-form').addEventListener('submit', async event => {
   event.preventDefault();
+  if (signup && updatePasswordAdvice().length) {
+    message('비밀번호 조건을 확인해 주세요.', true);
+    $('password').focus();
+    return;
+  }
   if (signup && $('password').value !== $('confirm').value) {
     message('비밀번호 확인이 일치하지 않습니다.', true);
     $('confirm').focus();

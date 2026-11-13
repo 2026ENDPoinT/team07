@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { openDatabase } from './db.js';
 import { hashPassword, verifyPassword } from './password.js';
+import { getPasswordErrors } from '../public/js/auth/password-policy.js';
 import { createAcademicStore, validateAcademicState } from './academic.js';
 import { validateCalendarState } from './calendar.js';
 import { configurationError, failureDetails } from './diagnostics.js';
@@ -32,6 +33,7 @@ const staticFiles = new Map([
   ['/css/auth-redesign.css', ['public/css/auth-redesign.css', 'text/css; charset=utf-8']],
   ['/js/auth/api.js', ['public/js/auth/api.js', 'text/javascript; charset=utf-8']],
   ['/js/auth/login.js', ['public/js/auth/login.js', 'text/javascript; charset=utf-8']],
+  ['/js/auth/password-policy.js', ['public/js/auth/password-policy.js', 'text/javascript; charset=utf-8']],
   ['/js/academic-api.js', ['public/js/academic-api.js', 'text/javascript; charset=utf-8']],
   ['/js/dashboard.js', ['public/dashboard.js', 'text/javascript; charset=utf-8']],
   ['/js/grade-analysis.js', ['public/grade-analysis.js', 'text/javascript; charset=utf-8']],
@@ -147,12 +149,12 @@ export async function createApp({
     activeHashes++;
     try { return await task(); } finally { activeHashes--; }
   }
-  // 이메일 표기를 통일하고 이메일 형식과 비밀번호 길이를 검증합니다.
+  // 이메일과 로그인 입력의 기본 형식만 확인합니다. 이전 계정 로그인에는 새 정책을 강제하지 않습니다.
   function credentials(body) {
     if (!body || typeof body.email !== 'string' || typeof body.password !== 'string') return null;
     const email = body.email.trim().toLowerCase();
     if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-    if (body.password.length < 15 || body.password.length > 128) return null;
+    if (body.password.length < 8 || body.password.length > 128) return null;
     return { email, password: body.password };
   }
   // JSON 요청만 허용하고 본문 크기를 제한합니다. 인증은 기본 8 KiB입니다.
@@ -283,8 +285,9 @@ export async function createApp({
         return json(res, 400, { message: '비밀번호 입력 형식을 확인해 주세요.' });
       }
       if (password !== passwordConfirm) return json(res, 400, { message: '비밀번호 확인이 일치하지 않습니다.' });
-      if (password && (password.length < 15 || password.length > 128)) {
-        return json(res, 400, { message: '비밀번호는 15~128자로 입력해 주세요.' });
+      if (password) {
+        const errors = getPasswordErrors(password);
+        if (errors.length) return json(res, 400, { message: errors.join(' '), errors });
       }
       const credentialsChanged = email !== user.email || Boolean(password);
       let oldPasswordHash = null;
@@ -345,9 +348,11 @@ export async function createApp({
       if (!await allowAttempt(res, `ip:${digest(req.socket.remoteAddress || 'unknown')}`, authLimit)) return;
       const body = await readJson(req);
       const input = credentials(body);
-      if (!input) return json(res, 400, { message: '이메일과 비밀번호(15~128자)를 확인해 주세요.' });
-      // 회원가입: 입력 검증 후 비밀번호 해시를 저장하고 자동 로그인합니다.
+      if (!input) return json(res, 400, { message: '이메일 또는 비밀번호 입력 형식을 확인해 주세요.' });
+      // 회원가입 및 새 비밀번호에만 새 규칙을 적용합니다. 기존 비밀번호 로그인을 차단하지 않습니다.
       if (path.endsWith('/signup')) {
+        const errors = getPasswordErrors(input.password);
+        if (errors.length) return json(res, 400, { message: errors.join(' '), errors });
         const name = typeof body.name === 'string' ? body.name.trim() : '';
         if (!name || name.length > 50) return json(res, 400, { message: '이름은 1~50자로 입력해 주세요.' });
         const hash = await passwordWork(res, () => hashPassword(input.password));

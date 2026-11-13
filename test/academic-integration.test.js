@@ -9,7 +9,7 @@ import { launch as launchHttp } from './http-helper.js';
 import { calculateSemesterGpa } from '../js/graph/gradeGraph.js';
 
 const origin = 'http://localhost:3000';
-const password = 'long-enough-password-2026';
+const password = 'Aa1!test2026';
 const course = (overrides = {}) => ({
   id: 'course-1', courseName: '자료구조', credits: 3, grade: 'A+', gradePoint: 4.5,
   semester: '2026-1', category: 'major', status: 'completed', isRetake: false, ...overrides

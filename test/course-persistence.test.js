@@ -6,7 +6,7 @@ import { calculateGraduationCredits } from '../js/credits/graduation.js';
 import { calculateCumulativeGPA } from '../js/grades/gpa.js';
 
 const origin = 'http://localhost:3000';
-const password = 'password-for-tests-2026';
+const password = 'Aa1!test2026';
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
 
 test('double-major and minor courses retain their categories after profile changes and count toward total credits', async () => {

@@ -17,7 +17,7 @@ test('courses persist across requests and remain private per account', async () 
   await new Promise(resolve => app.listen(0, '127.0.0.1', resolve));
   const base = `http://127.0.0.1:${app.address().port}`;
   try {
-    const first = await request(base, '/api/auth/signup', { method: 'POST', body: { name: 'A', email: 'a@example.com', password: 'password-for-tests-2026' } });
+    const first = await request(base, '/api/auth/signup', { method: 'POST', body: { name: 'A', email: 'a@example.com', password: 'Aa1!test2026' } });
     assert.equal(first.status, 201);
     const initial = await request(base, '/api/courses', { cookie: first.cookie });
     assert.equal(initial.data.courses, null);
@@ -27,7 +27,7 @@ test('courses persist across requests and remain private per account', async () 
     assert.equal(saved.data.courses[0].gradePoint, 4.5);
     const loaded = await request(base, '/api/courses', { cookie: first.cookie });
     assert.equal(loaded.data.courses[0].courseName, '자료구조');
-    const second = await request(base, '/api/auth/signup', { method: 'POST', body: { name: 'B', email: 'b@example.com', password: 'password-for-tests-2026' } });
+    const second = await request(base, '/api/auth/signup', { method: 'POST', body: { name: 'B', email: 'b@example.com', password: 'Aa1!test2026' } });
     const isolated = await request(base, '/api/courses', { cookie: second.cookie });
     assert.equal(isolated.data.courses, null);
     const denied = await request(base, '/api/courses');

@@ -12,7 +12,7 @@ import { launch } from './http-helper.js';
 import { verifyProfileFlow } from './profile-helper.js';
 
 const origin = 'http://localhost:3000';
-const password = 'test-only-password-2026';
+const password = 'Aa1!test2026';
 const course = { id: 'test-course', courseName: '자료구조', credits: 3, grade: 'A+', gradePoint: 99,
   semester: '2026-1', category: 'major', status: 'completed', isRetake: false };
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
@@ -63,7 +63,7 @@ test('PostgreSQL profile migration and updates preserve accounts and password co
     const expected = await verifyProfileFlow(service);
     await service.close();
     service = await launch(':memory:', { database: await pg.connect() });
-    const login = await service.request('/api/auth/login', { email: expected.email, password: 'updated-test-password-2026' });
+    const login = await service.request('/api/auth/login', { email: expected.email, password: 'Bb2@changed2026' });
     assert.equal(login.status, 200);
     assert.deepEqual((await login.json()).user, expected);
   } finally {

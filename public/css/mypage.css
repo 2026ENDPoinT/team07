@@ -25,3 +25,5 @@
     .profile-card { padding: 20px; }
     .profile-grid { grid-template-columns: 1fr; }
 }
+
+#password-strength { white-space: pre-line; overflow-wrap: anywhere; }

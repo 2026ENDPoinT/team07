@@ -52,3 +52,5 @@ body {display:block;min-height:100vh;padding:0;background:#fff}
  .auth-stage .card .description {margin-bottom:25px}
  .auth-copyright {bottom:20px;text-align:center;width:100%}
 }
+
+#signup-password-security { white-space: pre-line; overflow-wrap: anywhere; }

@@ -1,3 +1,5 @@
+// 회원가입과 비밀번호 변경 시 브라우저·서버가 동일하게 적용하는 규칙입니다.
+// 로그인에는 적용하지 않습니다. 변경 이전에 가입한 기존 사용자를 보호합니다.
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 20;
 export const PASSWORD_SPECIAL_CHARACTERS = "`~!@#$%^&*|'\";:₩\\?";
@@ -21,7 +23,6 @@ export function getPasswordErrors(password) {
   return errors;
 }
 
-// 브라우저와 서버에서 같은 규칙을 사용합니다.
 export function isValidPassword(password) {
   return getPasswordErrors(password).length === 0;
 }
