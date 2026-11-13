@@ -40,8 +40,22 @@ $('switch-mode').addEventListener('click', () => {
   $('description').textContent = signup ? '나만의 학업 여정을 만들어 보세요.' : '오늘도 한 걸음, 목표에 가까워질 시간이에요.';
   $('switch-mode').textContent = signup ? '이미 계정이 있으신가요? 로그인' : '아직 ENDPoinT 계정이 없으신가요? 회원가입';
   busy(false);
+  updatePasswordAdvice();
   message('');
 });
+// 회원가입에서만 비밀번호 길이 안내를 보여줍니다. 기존 계정 로그인은 검사 기준을 바꾸지 않습니다.
+function updatePasswordAdvice() {
+  const password = $('password').value;
+  const hint = $('signup-password-security');
+  hint.hidden = !signup;
+  hint.textContent = !password ? '새 비밀번호는 15자 이상으로 설정해 주세요.'
+    : password.length < 15 ? `15자 이상 필요합니다. (현재 ${password.length}자)`
+    : password.length < 20 ? '길이 조건을 충족했습니다. 다른 사이트에서 사용하지 않은 비밀번호를 추천합니다.'
+    : '긴 비밀번호입니다. 다른 사이트와 중복 사용하지 마세요.';
+  hint.dataset.error = String(Boolean(password && password.length < 15));
+}
+$('password').addEventListener('input', updatePasswordAdvice);
+
 // 비밀번호 확인 후 로그인 또는 회원가입 API를 호출하고 결과를 화면에 반영합니다.
 $('auth-form').addEventListener('submit', async event => {
   event.preventDefault();

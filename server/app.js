@@ -254,7 +254,7 @@ export async function createApp({
       }
       if (url.search) return json(res, 400, { message: '사용자를 지정하는 요청은 지원하지 않습니다.' });
       const body = await readJson(req);
-      const fields = ['name', 'email', 'department', 'doubleMajor', 'minor', 'password', 'passwordConfirm'];
+      const fields = ['name', 'email', 'department', 'doubleMajor', 'minor', 'password', 'passwordConfirm', 'currentPassword'];
       if (!body || Array.isArray(body) || typeof body !== 'object' ||
           Object.keys(body).some(key => !fields.includes(key)) ||
           !['name', 'email', 'department'].every(key => typeof body[key] === 'string')) {
@@ -278,16 +278,33 @@ export async function createApp({
       }
       const password = body.password === undefined ? '' : body.password;
       const passwordConfirm = body.passwordConfirm === undefined ? '' : body.passwordConfirm;
-      if (typeof password !== 'string' || typeof passwordConfirm !== 'string') {
+      const currentPassword = body.currentPassword === undefined ? '' : body.currentPassword;
+      if (typeof password !== 'string' || typeof passwordConfirm !== 'string' || typeof currentPassword !== 'string') {
         return json(res, 400, { message: '비밀번호 입력 형식을 확인해 주세요.' });
       }
       if (password !== passwordConfirm) return json(res, 400, { message: '비밀번호 확인이 일치하지 않습니다.' });
       if (password && (password.length < 15 || password.length > 128)) {
         return json(res, 400, { message: '비밀번호는 15~128자로 입력해 주세요.' });
       }
+      const credentialsChanged = email !== user.email || Boolean(password);
+      let oldPasswordHash = null;
+      // 탈취된 세션만으로 계정 이메일·비밀번호를 바꿀 수 없도록 재인증합니다.
+      if (credentialsChanged) {
+        if (!currentPassword || currentPassword.length > 128) {
+          return json(res, 400, { message: '이메일이나 비밀번호를 변경하려면 현재 비밀번호를 입력해 주세요.' });
+        }
+        // 비밀번호 재확인에도 계정별 요청 제한을 적용합니다.
+        if (!await allowAttempt(res, `profile:${digest(String(user.id))}`, accountLimit)) return;
+        oldPasswordHash = (await db.query(`SELECT password_hash FROM ${usersTable} WHERE id = $1`, [user.id])).rows[0]?.password_hash;
+        const valid = await passwordWork(res, () => verifyPassword(currentPassword, oldPasswordHash || dummyHash));
+        if (valid === null) return;
+        if (!valid) return json(res, 400, { message: '현재 비밀번호가 올바르지 않습니다.' });
+        if (password && password === currentPassword) {
+          return json(res, 400, { message: '새 비밀번호는 현재 비밀번호와 다르게 입력해 주세요.' });
+        }
+      }
       let hash = null;
       if (password) {
-        if (!await allowAttempt(res, `profile:${digest(String(user.id))}`, accountLimit)) return;
         hash = await passwordWork(res, () => hashPassword(password));
         if (hash === null) return;
       }
@@ -297,17 +314,24 @@ export async function createApp({
         saved = (await db.query(`UPDATE ${usersTable}
           SET name = $1, email = $2, department = $3, password_hash = COALESCE($4, password_hash),
             double_major = COALESCE($8, double_major), minor = COALESCE($9, minor)
-          WHERE id = $5 AND EXISTS (SELECT 1 FROM ${sessionsTable}
-            WHERE token_hash = $6 AND user_id = $5 AND expires_at > $7)
+          WHERE id = $5 AND ($10 IS NULL OR password_hash = $10)
+            AND EXISTS (SELECT 1 FROM ${sessionsTable}
+              WHERE token_hash = $6 AND user_id = $5 AND expires_at > $7)
           RETURNING id, email, name, department, double_major AS "doubleMajor", minor`,
-        [name, email, department, hash, user.id, digest(tokenFrom(req)), Date.now(), majors.doubleMajor, majors.minor])).rows[0];
+        [name, email, department, hash, user.id, digest(tokenFrom(req)), Date.now(), majors.doubleMajor, majors.minor, oldPasswordHash])).rows[0];
       } catch (error) {
         if (error.code === '23505' || error.errcode === 2067) {
           return json(res, 409, { message: '이미 사용 중인 아이디(이메일)입니다.' });
         }
         throw error;
       }
-      return saved ? json(res, 200, { user: saved }) : json(res, 401, { message: '로그인이 필요합니다.' });
+      if (!saved) return json(res, 409, { message: '계정 또는 로그인 상태가 변경되었습니다. 다시 로그인해 주세요.' });
+      if (credentialsChanged) {
+        // 모든 기기에서 이전 세션을 폐기하며, 변경된 인증 정보로 재로그인하게 합니다.
+        await db.query(`DELETE FROM ${sessionsTable} WHERE user_id = $1`, [user.id]);
+        cookie(res, '', 0);
+      }
+      return json(res, 200, { user: saved, ...(credentialsChanged ? { reauthenticate: true } : {}) });
     }
     // 로그아웃: 서버 세션을 폐기하고 브라우저의 쿠키도 만료시킵니다.
     if (path === '/api/auth/logout' && req.method === 'POST') {

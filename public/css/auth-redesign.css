@@ -32,7 +32,7 @@ body {display:block;min-height:100vh;padding:0;background:#fff}
 .auth-stage .card button.secondary:hover {color:#2563eb;background:#f4f7fd}
 .auth-stage .card button:disabled {opacity:.5}
 #message {margin-top:12px;color:#63718a;font-size:12px}
-#message[data-error="true"] {color:#be4560}
+#message[data-error="true"], #signup-password-security[data-error="true"] {color:#be4560}
 .auth-copyright {position:absolute;bottom:35px;color:#8b96a8;font-size:11px;margin:0}
 [hidden] {display:none!important}
 @media(max-width:960px) {.auth-showcase {padding:40px 35px}.auth-showcase h2 {font-size:32px}.hero-sample {padding:22px;margin-top:35px}.auth-stage-help {right:25px}}

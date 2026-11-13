@@ -39,7 +39,22 @@ function validatePasswords() {
     $('password-confirm').setAttribute('aria-invalid', String(mismatch));
     $('password-match').textContent = mismatch ? '비밀번호 확인이 일치하지 않습니다.' : password ? '비밀번호가 일치합니다.' : '';
     $('password-match').dataset.error = String(mismatch);
+    const strength = $('password-strength');
+    strength.textContent = !password ? '' : password.length < 15
+        ? `15자 이상 입력해 주세요. (현재 ${password.length}자)`
+        : password.length < 20 ? '길이 기준 충족 · 20자 이상의 긴 암호문도 추천합니다.'
+        : '긴 비밀번호입니다. 다른 사이트에서 사용한 암호는 피하세요.';
+    strength.dataset.error = String(Boolean(password && password.length < 15));
+    syncCredentialRequirement();
     return !mismatch;
+}
+
+function syncCredentialRequirement() {
+    if (!savedUser) return;
+    const emailChanged = $('email').value.trim().toLowerCase() !== savedUser.email;
+    const credentialChange = emailChanged || Boolean($('password').value);
+    $('current-password').required = credentialChange;
+    $('current-password').setCustomValidity('');
 }
 
 function showUser(user) {
@@ -53,6 +68,7 @@ function showUser(user) {
     syncMajorFields();
     $('password').value = '';
     $('password-confirm').value = '';
+    $('current-password').value = '';
     validatePasswords();
 }
 
@@ -65,6 +81,7 @@ function handleError(error) {
         savedUser = undefined;
         $('password').value = '';
         $('password-confirm').value = '';
+        $('current-password').value = '';
         validatePasswords();
         $('retry-profile').hidden = false;
     }
@@ -87,6 +104,7 @@ async function loadProfile() {
 }
 
 for (const id of ['password', 'password-confirm']) $(id).addEventListener('input', validatePasswords);
+$('email').addEventListener('input', syncCredentialRequirement);
 for (const { checkbox, input } of majorFields) {
     $(checkbox).addEventListener('change', syncMajorFields);
     $(input).addEventListener('input', syncMajorFields);
@@ -103,23 +121,24 @@ $('profile-form').addEventListener('submit', async event => {
     }
     busy(true);
     message('회원정보를 저장하는 중입니다.');
-    const credentialsChanged = $('email').value.trim().toLowerCase() !== savedUser.email || Boolean($('password').value);
+
     try {
-        const { user } = await authRequest('profile', {
+        const { user, reauthenticate } = await authRequest('profile', {
             name: $('name').value,
             email: $('email').value,
             department: $('department').value,
             doubleMajor: $('has-double-major').checked ? $('double-major').value : '',
             minor: $('has-minor').checked ? $('minor').value : '',
             password: $('password').value,
-            passwordConfirm: $('password-confirm').value
+            passwordConfirm: $('password-confirm').value,
+            currentPassword: $('current-password').value
         }, { headers: { 'X-Account-Id': String(savedUser.id) } });
         showUser(user);
         message('');
-        window.alert(credentialsChanged
-            ? '회원정보가 변경되었습니다. 다음 로그인부터 변경된 로그인 정보를 사용해 주세요.'
+        window.alert(reauthenticate
+            ? '로그인 정보가 안전하게 변경되었습니다. 모든 기기의 기존 세션이 만료되었습니다. 다시 로그인해 주세요.'
             : '회원정보가 변경되었습니다.');
-        window.location.assign('/index.html');
+        window.location.assign(reauthenticate ? '/login.html' : '/index.html');
     } catch (error) { handleError(error); }
     finally { busy(false); }
 });
