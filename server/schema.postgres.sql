@@ -29,11 +29,18 @@ CREATE TABLE IF NOT EXISTS app_private.academic_state (
   current_year INTEGER NOT NULL DEFAULT 1 CHECK (current_year BETWEEN 1 AND 4),
   revision BIGINT NOT NULL DEFAULT 0 CHECK (revision BETWEEN 0 AND 9007199254740991)
 );
+CREATE TABLE IF NOT EXISTS app_private.calendar_state (
+  user_id BIGINT PRIMARY KEY REFERENCES app_private.users(id) ON DELETE CASCADE,
+  events JSONB NOT NULL DEFAULT '[]'::jsonb
+    CHECK (jsonb_typeof(events) = 'array' AND jsonb_array_length(events) <= 1000),
+  revision BIGINT NOT NULL DEFAULT 0 CHECK (revision BETWEEN 0 AND 9007199254740991)
+);
 -- 웹 사용자는 Node 세션으로 인증합니다. Supabase Auth 사용자용 공개 정책은 만들지 않습니다.
 ALTER TABLE app_private.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_private.sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_private.auth_attempts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_private.academic_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_private.calendar_state ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON ALL TABLES IN SCHEMA app_private FROM PUBLIC;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA app_private FROM PUBLIC;
 -- 일반 PostgreSQL에서도 실행 가능하도록 Supabase 역할이 있을 때만 권한을 회수합니다.

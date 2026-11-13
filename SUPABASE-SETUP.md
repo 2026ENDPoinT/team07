@@ -77,4 +77,23 @@ npm.cmd start
 
 로컬 DB·원본 ZIP·비교용 ZIP 폴더는 변경하거나 삭제하지 않습니다. 로컬 SQLite나 ZIP의 `public.user_courses`를 새 스키마에 자동 이전하지 않습니다. 새 계정으로 시작할 수 있으며 기존 데이터를 사용하려면 별도 이전이 필요합니다.
 
+## 시작 직후 종료될 때
+
+`Server startup failed.` 다음의 대괄호 코드를 확인합니다. 서버 로그에는 URI·비밀번호·SQL 원문 대신 원인 코드와 고정된 조치 안내만 기록합니다. 이전 코드가 한 줄의 일반 안내만 출력했다면 이 진단 변경을 포함한 커밋으로 재배포해야 원인을 구분할 수 있습니다.
+
+| 로그 코드 | 확인 및 조치 |
+| --- | --- |
+| `APP_ORIGIN_HTTPS_REQUIRED`, `APP_ORIGIN_INVALID` | Render Environment의 `APP_ORIGIN`을 실제 서비스 HTTPS 주소로 설정 |
+| `DATABASE_URL_REQUIRED`, `DATABASE_URL_INVALID` | 같은 Render 서비스에 Supabase Connect → Session pooler URI를 설정. API URL·anon/service role 키를 넣지 않음 |
+| `28P01`, `28000` | DB 비밀번호와 pooler 사용자명 확인. 비밀번호의 예약 문자는 URL 인코딩 |
+| `ENETUNREACH`, `ENOTFOUND`, `ECONNREFUSED`, `ETIMEDOUT` | 연결 주소·포트·프로젝트 상태·네트워크 제한 확인. IPv6 연결이 불가능하면 Session pooler 사용 |
+| `SELF_SIGNED_CERT_IN_CHAIN`, `UNABLE_TO_VERIFY_LEAF_SIGNATURE` 등 TLS 인증서 코드 | 위의 TLS 절차에 따라 CA Secret File을 설정하고 인증서 검증 유지 |
+| `42501` | 초기 스키마를 생성·관리할 DB 소유자 연결인지 확인 |
+| `42P01`, `42703` | 배포한 코드와 `app_private` 스키마의 테이블·컬럼 호환성 확인 |
+| `53300`, `57P03`, `57014` | 연결 한도·프로젝트 가용성·DB 잠금 및 부하 확인 |
+
+`.env not found. Continuing without it.`는 Render 환경변수를 사용한다면 정상입니다. `node:sqlite`의 experimental 경고도 모듈을 불러올 때 출력되므로 PostgreSQL 대신 SQLite를 사용했다거나 종료 원인이라는 뜻은 아닙니다. Build 성공은 DB 연결 성공을 보장하지 않습니다.
+
+수정 후 재배포한 커밋을 확인하고 `/healthz`가 200인지 확인합니다. 그다음 회원가입·로그인·과목 저장을 확인하세요. 계속 실패하면 원인 코드를 공유하고, DB URI·비밀번호·API 키는 보내지 마세요.
+
 참고: [Render Blueprint](https://render.com/docs/blueprint-spec), [Render Free](https://render.com/docs/free), [Supabase 연결](https://supabase.com/docs/guides/database/connecting-to-postgres), [Supabase API 보안](https://supabase.com/docs/guides/api/securing-your-api), [node-postgres TLS](https://node-postgres.com/features/ssl).

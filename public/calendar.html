@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENDPoinT | 일정 관리</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/calendar.css">
+    <script type="module" src="/js/calendar.js"></script>
+</head>
+<body class="calendar-page">
+    <header class="topbar">
+        <a class="logo" href="/index.html"><span class="logo-icon">E</span><span>ENDPoinT</span></a>
+        <div class="user-area"><span id="user-name">사용자</span><button id="logout-button" class="logout-button" type="button">로그아웃</button></div>
+    </header>
+    <main class="main-content">
+        <nav class="analysis-navigation" aria-label="대시보드 이동"><a class="secondary-button" href="/index.html">← 학업 대시보드로 돌아가기</a></nav>
+        <section class="welcome-section">
+            <p class="eyebrow">MY SCHEDULE</p>
+            <h1>일정 관리 대시보드</h1>
+            <p class="subtitle">수업, 과제, 시험 일정을 나만의 달력에 기록하세요.</p>
+            <p class="subtitle">일정은 로그인한 계정에 저장되며, 다시 접속해도 확인할 수 있습니다.</p>
+        </section>
+        <div class="calendar-actions">
+            <p id="month-count" class="subtitle">일정을 불러오는 중입니다.</p>
+            <div class="form-actions">
+                <button id="reload-calendar" class="secondary-button" type="button">새로고침</button>
+                <button id="add-event" class="primary-button" type="button" disabled>+ 일정 추가</button>
+            </div>
+        </div>
+        <p id="calendar-message" class="dashboard-message" role="status" aria-live="polite"></p>
+        <div id="calendar-content" class="calendar-layout" aria-busy="true">
+            <section class="calendar-panel" aria-labelledby="month-title">
+                <div class="calendar-toolbar">
+                    <h2 id="month-title" class="calendar-period-picker" aria-label="표시할 연도와 월">
+                        <select id="calendar-year" aria-label="표시 연도"></select>
+                        <select id="calendar-month" aria-label="표시 월"></select>
+                    </h2>
+                    <div class="form-actions">
+                        <button id="previous-month" type="button" class="secondary-button" aria-label="이전 달">‹</button>
+                        <button id="today" type="button" class="secondary-button">오늘</button>
+                        <button id="next-month" type="button" class="secondary-button" aria-label="다음 달">›</button>
+                    </div>
+                </div>
+                <div class="calendar-weekdays" aria-hidden="true"><span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span></div>
+                <div id="calendar-days" class="calendar-days" role="group" aria-label="날짜 선택"></div>
+                <p class="calendar-hint">연도·월을 눌러 이동할 수 있습니다(1900~2100년). 날짜를 선택하면 해당 날짜의 일정을 확인할 수 있습니다.</p>
+            </section>
+            <section class="agenda-panel" aria-labelledby="selected-date">
+                <p class="eyebrow">DAILY SCHEDULE</p>
+                <h2 id="selected-date"></h2>
+                <p id="day-count" class="subtitle"></p>
+                <ul id="event-list" class="event-list" aria-live="polite"></ul>
+            </section>
+        </div>
+    </main>
+    <dialog id="event-dialog" class="event-dialog" aria-labelledby="event-dialog-title">
+        <form id="event-form">
+            <h2 id="event-dialog-title">일정 추가</h2>
+            <fieldset id="event-fields">
+                <label for="event-title">일정 제목 <span class="form-hint">필수 · 최대 100자</span></label>
+                <input id="event-title" name="title" maxlength="100" required autocomplete="off">
+                <div class="event-date-time">
+                    <div><label for="event-date">시작 날짜</label><input id="event-date" name="date" type="date" min="1900-01-01" max="2100-12-31" required></div>
+                    <div><label for="event-time">시작 시간 <span class="form-hint">선택</span></label><input id="event-time" name="time" type="time" step="60"></div>
+                </div>
+                <div class="event-date-time">
+                    <div><label for="event-end-date">종료 날짜</label><input id="event-end-date" name="endDate" type="date" min="1900-01-01" max="2100-12-31" required></div>
+                    <div><label for="event-end-time">종료 시간 <span class="form-hint">선택</span></label><input id="event-end-time" name="endTime" type="time" step="60"></div>
+                </div>
+                <p class="form-hint">시간은 둘 다 입력하거나 비워 주세요. 같은 날짜에 시간이 없으면 종일 일정이며, 여러 날짜에 시간이 없으면 종료일까지 종일 일정으로 표시합니다.</p>
+                <label for="event-notes">메모 <span class="form-hint">최대 2,000자</span></label>
+                <textarea id="event-notes" name="notes" maxlength="2000" rows="4"></textarea>
+            </fieldset>
+            <p id="event-message" class="dashboard-message" role="status" aria-live="polite"></p>
+            <div class="form-actions dialog-actions">
+                <button id="reload-in-dialog" class="secondary-button" type="button" hidden>최신 일정 불러오기</button>
+                <button id="cancel-event" class="secondary-button" type="button">취소</button>
+                <button id="save-event" class="primary-button" type="submit">저장</button>
+            </div>
+        </form>
+    </dialog>
+    <dialog id="delete-dialog" class="course-dialog" aria-labelledby="delete-title">
+        <h2 id="delete-title">일정을 삭제할까요?</h2>
+        <p id="delete-description"></p>
+        <p id="delete-message" class="dashboard-message" role="status"></p>
+        <div class="form-actions"><button id="cancel-delete" class="secondary-button" type="button">취소</button><button id="confirm-delete" class="delete-button" type="button">삭제</button></div>
+    </dialog>
+</body>
+</html>

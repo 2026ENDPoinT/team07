@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 import { openDatabase } from './db.js';
 import { hashPassword, verifyPassword } from './password.js';
 import { createAcademicStore, validateAcademicState } from './academic.js';
+import { validateCalendarState } from './calendar.js';
+import { configurationError, failureDetails } from './diagnostics.js';
 
 const SESSION_MS = 24 * 60 * 60 * 1000;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -16,6 +18,11 @@ const staticFiles = new Map([
   ['/login.html', ['public/login.html', 'text/html; charset=utf-8']],
   ['/index.html', ['public/index.html', 'text/html; charset=utf-8']],
   ['/grade-analysis.html', ['public/grade-analysis.html', 'text/html; charset=utf-8']],
+  ['/calendar.html', ['public/calendar.html', 'text/html; charset=utf-8']],
+  ['/css/calendar.css', ['public/css/calendar.css', 'text/css; charset=utf-8']],
+  ['/js/calendar.js', ['public/calendar.js', 'text/javascript; charset=utf-8']],
+  ['/js/calendar-api.js', ['public/js/calendar-api.js', 'text/javascript; charset=utf-8']],
+  ['/js/calendar-model.js', ['public/js/calendar-model.js', 'text/javascript; charset=utf-8']],
   ['/css/auth.css', ['public/css/auth.css', 'text/css; charset=utf-8']],
   ['/css/dashboard.css', ['public/css/dashboard.css', 'text/css; charset=utf-8']],
   ['/js/auth/api.js', ['public/js/auth/api.js', 'text/javascript; charset=utf-8']],
@@ -46,14 +53,18 @@ export async function createApp({
   authLimit = 30,
   accountLimit = 10
 } = {}) {
-  origin = new URL(origin).origin;
+  try {
+    const parsedOrigin = new URL(origin);
+    if (!['http:', 'https:'].includes(parsedOrigin.protocol)) throw new Error();
+    origin = parsedOrigin.origin;
+  } catch { throw configurationError('APP_ORIGIN_INVALID', 'APP_ORIGIN must be a valid HTTP(S) origin.'); }
 
-  if (production && !origin.startsWith('https://')) throw new Error('Production APP_ORIGIN must use HTTPS.');
+  if (production && !origin.startsWith('https://')) throw configurationError('APP_ORIGIN_HTTPS_REQUIRED', 'Production APP_ORIGIN must use HTTPS.');
   if (![authLimit, accountLimit].every(value => Number.isSafeInteger(value) && value > 0)) {
-    throw new Error('Authentication limits must be positive integers.');
+    throw configurationError('AUTH_LIMITS_INVALID', 'Authentication limits must be positive integers.');
   }
   if (requirePostgres && !databaseUrl && database?.type !== 'postgres') {
-    throw new Error('DATABASE_URL is required on Render. Refusing ephemeral SQLite fallback.');
+    throw configurationError('DATABASE_URL_REQUIRED', 'DATABASE_URL is required on Render. Refusing ephemeral SQLite fallback.');
   }
   const cookieName = production ? '__Host-team07_session' : 'team07_session';
   const db = database || await openDatabase(dbPath, { databaseUrl, production,
@@ -191,7 +202,8 @@ export async function createApp({
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin !== origin) {
       return json(res, 403, { message: '허용되지 않은 요청 출처입니다.' });
     }
-    if (path === '/api/academic') {
+    if (path === '/api/academic' || path === '/api/calendar') {
+      const isCalendar = path === '/api/calendar';
       const user = await currentUser(req);
       if (!user) return json(res, 401, { message: '로그인이 필요합니다.' });
       // 이 헤더는 DB 선택자가 아닌 계정 변경 감지용입니다. 실제 DB 선택은 세션만 사용합니다.
@@ -199,14 +211,14 @@ export async function createApp({
         return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
       }
       if (url.search) return json(res, 400, { message: '사용자나 DB를 지정하는 요청은 지원하지 않습니다.' });
-      if (req.method === 'GET') return json(res, 200, await academic.read(user.id));
+      if (req.method === 'GET') return json(res, 200, await (isCalendar ? academic.readCalendar(user.id) : academic.read(user.id)));
       if (req.method !== 'PUT') return json(res, 405, { message: '지원하지 않는 메서드입니다.' });
-      const state = validateAcademicState(await readJson(req, 256 * 1024));
+      const state = (isCalendar ? validateCalendarState : validateAcademicState)(await readJson(req, isCalendar ? 8 * 1024 * 1024 : 256 * 1024));
       // 본문을 받는 동안 로그아웃·만료된 세션도 거부합니다.
       const authenticated = await currentUser(req);
       if (!authenticated) return json(res, 401, { message: '로그인이 필요합니다.' });
       if (authenticated.id !== user.id) return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
-      return json(res, 200, await academic.write(user.id, state));
+      return json(res, 200, await (isCalendar ? academic.writeCalendar(user.id, state) : academic.write(user.id, state)));
     }
     // 로그인 상태 확인: 비밀번호 정보를 제외한 현재 사용자 정보를 반환합니다.
     if (path === '/api/auth/me' && req.method === 'GET') {
@@ -257,7 +269,7 @@ export async function createApp({
     handle(req, res).catch(err => {
       if (res.headersSent || res.destroyed) return;
       const status = [400, 409, 413, 415].includes(err.status) ? err.status : 500;
-      if (status === 500) console.error('Request failed.');
+      if (status === 500) console.error('Request failed.', failureDetails(err));
       json(res, status, { message: status === 500 ? '서버 오류가 발생했습니다.' : err.message });
     });
   });
@@ -271,12 +283,12 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   // 시작 오류에 연결 문자열이나 인증 정보가 포함되어도 공개하지 않습니다.
   let service;
   try { service = await createApp(); }
-  catch { console.error('Server startup failed. Check database, TLS and APP_ORIGIN settings.'); process.exit(1); }
+  catch (error) { console.error('Server startup failed.', failureDetails(error)); process.exit(1); }
   const { app, db } = service;
   app.listen(port, process.env.HOST || '127.0.0.1', () => {
     console.log(`ENDPoinT: ${process.env.APP_ORIGIN || `http://localhost:${port}`}/`);
   });
-  app.on('error', async () => { console.error('HTTP server failed.'); await db.close(); process.exitCode = 1; });
+  app.on('error', async error => { console.error('HTTP server failed.', failureDetails(error)); await db.close(); process.exitCode = 1; });
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => {
     app.close(async () => { await db.close(); process.exit(0); });
   });

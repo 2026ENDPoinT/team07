@@ -156,7 +156,7 @@ test('PostgreSQL HTTP flow keeps sessions, academic isolation, revisions and pri
     assert.equal((await academic(service, bCookie, b.id, state)).status, 401);
     assert.equal((await pg.engine.query('SELECT marker FROM public.users')).rows[0].marker, 'existing-zip-data');
     const tables = (await pg.engine.query("SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'app_private'")).rows;
-    assert.equal(tables.length, 4);
+    assert.equal(tables.length, 5);
     assert.ok(tables.every(table => table.rowsecurity));
     for (const role of ['anon', 'authenticated']) {
       assert.equal((await pg.engine.query("SELECT has_schema_privilege($1, 'app_private', 'USAGE') AS allowed", [role])).rows[0].allowed, false);
@@ -203,6 +203,50 @@ test('PostgreSQL refuses a write if its session is revoked during upload', async
     pending.end(body.slice(10));
     assert.equal(await response, 401);
     assert.equal((await service.db.query('SELECT count(*) AS total FROM app_private.academic_state')).rows[0].total, '0');
+  } finally {
+    if (service) await service.close();
+    await pg.close();
+  }
+});
+
+test('PostgreSQL calendar persists per account with independent revisions and private access', async () => {
+  const pg = await fixture();
+  let service;
+  try {
+    service = await launch(':memory:', { database: await pg.connect() });
+    const signup = async name => {
+      const response = await service.request('/api/auth/signup', { name, email: `${name}@example.com`, password });
+      return { cookie: cookieOf(response), id: (await response.json()).user.id };
+    };
+    const a = await signup('calendar-a');
+    const b = await signup('calendar-b');
+    const request = (account, state) => service.request('/api/calendar', state, account.cookie, origin,
+      { method: state === undefined ? 'GET' : 'PUT', headers: { 'X-Account-Id': String(account.id) } });
+    const item = { id: 'deadline', title: '과제 마감', date: '2026-12-01', time: '', notes: '제출하기' };
+    const initial = { events: [], revision: 0 };
+    assert.deepEqual(await (await request(a)).json(), initial);
+    assert.deepEqual(await (await request(a, { events: [item], revision: 0 })).json(), { events: [item], revision: 1 });
+    assert.deepEqual(await (await request(b)).json(), initial);
+    assert.equal((await request({ ...b, id: a.id })).status, 403);
+    assert.equal((await request(a, initial)).status, 409);
+    assert.deepEqual(await (await academic(service, a.cookie, a.id)).json(), { courses: [], profile: { grade: 1 }, revision: 0 });
+    await service.close();
+    service = await launch(':memory:', { database: await pg.connect() });
+    assert.deepEqual(await (await request(a)).json(), { events: [item], revision: 1 });
+    const edited = { ...item, title: '과제 제출', time: '18:00', endDate: '2026-12-03', endTime: '09:00' };
+    assert.deepEqual(await (await request(a, { events: [edited], revision: 1 })).json(), { events: [edited], revision: 2 });
+    await service.close();
+    service = await launch(':memory:', { database: await pg.connect() });
+    assert.deepEqual(await (await request(a)).json(), { events: [edited], revision: 2 });
+    assert.deepEqual(await (await request(a, { events: [], revision: 2 })).json(), { events: [], revision: 3 });
+    await service.close();
+    service = await launch(':memory:', { database: await pg.connect() });
+    assert.deepEqual(await (await request(a)).json(), { events: [], revision: 3 });
+    for (const role of ['anon', 'authenticated']) {
+      await pg.engine.exec(`SET ROLE ${role}`);
+      try { await assert.rejects(pg.engine.query('SELECT * FROM app_private.calendar_state'), /permission denied/); }
+      finally { await pg.engine.exec('RESET ROLE'); }
+    }
   } finally {
     if (service) await service.close();
     await pg.close();

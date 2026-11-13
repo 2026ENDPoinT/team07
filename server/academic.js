@@ -75,6 +75,11 @@ export function createAcademicStore(authDb, authDbPath) {
       db.prepare('INSERT OR IGNORE INTO academic_state(singleton, storage_key) VALUES (1, ?)').run(key);
       const row = db.prepare('SELECT * FROM academic_state WHERE singleton = 1').get();
       if (row.storage_key !== key) throw new Error('User database identity mismatch.');
+      db.exec(`CREATE TABLE IF NOT EXISTS calendar_state (
+        singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+        events TEXT NOT NULL DEFAULT '[]',
+        revision INTEGER NOT NULL DEFAULT 0 CHECK(revision >= 0)
+      ); INSERT OR IGNORE INTO calendar_state(singleton) VALUES (1);`);
       return task(db, row);
     } finally {
       // 디스크 DB는 요청마다 닫아 가입자 수만큼 파일 핸들이 누적되지 않게 합니다.
@@ -85,6 +90,20 @@ export function createAcademicStore(authDb, authDbPath) {
   const stateOf = row => ({ courses: JSON.parse(row.courses), profile: { grade: row.current_year }, revision: row.revision });
   return {
     read(userId) { return withDatabase(userId, (_db, row) => stateOf(row)); },
+    readCalendar(userId) {
+      return withDatabase(userId, db => {
+        const row = db.prepare('SELECT events, revision FROM calendar_state WHERE singleton = 1').get();
+        return { events: JSON.parse(row.events), revision: row.revision };
+      });
+    },
+    writeCalendar(userId, state) {
+      return withDatabase(userId, db => {
+        const result = db.prepare(`UPDATE calendar_state SET events = ?, revision = revision + 1
+          WHERE singleton = 1 AND revision = ?`).run(JSON.stringify(state.events), state.revision);
+        if (!result.changes) throw fail(409, '다른 화면에서 일정이 변경되었습니다. 최신 일정을 불러온 뒤 다시 시도해 주세요.');
+        return { ...state, revision: state.revision + 1 };
+      });
+    },
     write(userId, state) {
       return withDatabase(userId, db => {
         // 버전 비교와 저장을 하나의 SQL 문장으로 처리해 다른 탭의 변경을 덮어쓰지 않습니다.
@@ -99,10 +118,22 @@ export function createAcademicStore(authDb, authDbPath) {
 }
 
 function createPostgresAcademicStore(db) {
+  const calendarOf = row => row ? { events: row.events, revision: Number(row.revision) } : { events: [], revision: 0 };
   const stateOf = row => row
     ? { courses: row.courses, profile: { grade: row.current_year }, revision: Number(row.revision) }
     : { courses: [], profile: { grade: 1 }, revision: 0 };
   return {
+    async readCalendar(userId) {
+      const { rows } = await db.query('SELECT events, revision FROM app_private.calendar_state WHERE user_id = $1', [userId]);
+      return calendarOf(rows[0]);
+    },
+    async writeCalendar(userId, state) {
+      await db.query('INSERT INTO app_private.calendar_state(user_id) VALUES ($1) ON CONFLICT(user_id) DO NOTHING', [userId]);
+      const { rows } = await db.query(`UPDATE app_private.calendar_state SET events = $2::jsonb, revision = revision + 1
+        WHERE user_id = $1 AND revision = $3 RETURNING events, revision`, [userId, JSON.stringify(state.events), state.revision]);
+      if (!rows.length) throw fail(409, '다른 화면에서 일정이 변경되었습니다. 최신 일정을 불러온 뒤 다시 시도해 주세요.');
+      return calendarOf(rows[0]);
+    },
     async read(userId) {
       const { rows } = await db.query('SELECT courses, current_year, revision FROM app_private.academic_state WHERE user_id = $1', [userId]);
       return stateOf(rows[0]);
