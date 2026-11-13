@@ -117,7 +117,7 @@ test('academic API rejects unauthenticated access, account spoofing, CSRF, stale
       { ...state, profile: { grade: 1, userId: id } }, { ...state, courses: {} },
       { ...state, courses: Array.from({ length: 501 }, (_, i) => exampleCourse({ id: `course-${i}` })) },
       { ...state, courses: [exampleCourse(), exampleCourse()] }];
-    for (const overrides of [{ credits: '3' }, { credits: 0 }, { credits: 31 }, { credits: 1.1 },
+    for (const overrides of [{ credits: '3' }, { credits: 0 }, { credits: 0.5 }, { credits: 13 }, { credits: 31 }, { credits: 1.1 },
       { courseName: ' ' }, { courseName: 'x'.repeat(101) }, { semester: '2026-3' }, { grade: 'constructor' },
       { category: 'other' }, { status: 'other' }, { isRetake: 'false' }, { id: '../other' }, { userId: id + 1 }]) {
       invalidStates.push({ ...state, courses: [exampleCourse(overrides)] });

@@ -220,6 +220,20 @@ export async function createApp({
       if (authenticated.id !== user.id) return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
       return json(res, 200, await (isCalendar ? academic.writeCalendar(user.id, state) : academic.write(user.id, state)));
     }
+    // 구버전 화면도 같은 계정별 저장소를 사용해 최신 학사 API와 데이터가 어긋나지 않게 합니다.
+    if (path === '/api/courses' && ['GET', 'PUT'].includes(req.method)) {
+      const user = await currentUser(req);
+      if (!user) return json(res, 401, { message: '로그인이 필요합니다.' });
+      const existing = await academic.read(user.id);
+      if (req.method === 'GET') return json(res, 200, { courses: existing.revision ? existing.courses : null });
+      const body = await readJson(req, 256 * 1024);
+      const state = validateAcademicState({ courses: body?.courses, profile: existing.profile, revision: existing.revision });
+      const authenticated = await currentUser(req);
+      if (!authenticated) return json(res, 401, { message: '로그인이 필요합니다.' });
+      if (authenticated.id !== user.id) return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
+      const saved = await academic.write(user.id, state);
+      return json(res, 200, { courses: saved.courses });
+    }
     // 로그인 상태 확인: 비밀번호 정보를 제외한 현재 사용자 정보를 반환합니다.
     if (path === '/api/auth/me' && req.method === 'GET') {
       const user = await currentUser(req);

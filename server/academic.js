@@ -22,11 +22,11 @@ export function validateAcademicState(body) {
     if (!onlyKeys(course, ['id', 'courseName', 'credits', 'grade', 'gradePoint', 'semester', 'status', 'category', 'isRetake']) ||
         typeof course.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(course.id) || ids.has(course.id) ||
         typeof course.courseName !== 'string' || !course.courseName.trim() || course.courseName.trim().length > 100 ||
-        typeof course.credits !== 'number' || !Number.isFinite(course.credits) || course.credits < 0.5 || course.credits > 30 || course.credits * 2 % 1 !== 0 ||
-        typeof course.semester !== 'string' || !/^\d{4}-[12]$/.test(course.semester) ||
+        typeof course.credits !== 'number' || !Number.isInteger(course.credits) || course.credits < 1 || course.credits > 12 ||
+        typeof course.semester !== 'string' || !/^\d{4}-(1|2|여름|겨울)$/.test(course.semester) ||
         !CATEGORIES.includes(course.category) || !STATUSES.includes(course.status) || typeof course.isRetake !== 'boolean' ||
         (course.status === 'completed' && (typeof course.grade !== 'string' || !Object.hasOwn(GRADE_POINTS, course.grade)))) {
-      throw fail(400, '과목 입력값을 확인해 주세요. 학점은 0.5~30 사이의 0.5 단위입니다.');
+      throw fail(400, '과목 입력값을 확인해 주세요. 학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울이며 학점은 1~12 사이의 정수여야 합니다.');
     }
     ids.add(course.id);
     // 평점은 요청의 gradePoint를 신뢰하지 않고 성적 등급으로 계산합니다.

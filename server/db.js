@@ -11,6 +11,9 @@ export async function openDatabase(filename = resolve('storage/team07.db'), opti
   // DB 잠금은 최대 5초 대기하고, WAL 모드로 읽기와 쓰기의 경합을 줄입니다.
   db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
   db.exec(readFileSync(new URL('./schema.sql', import.meta.url), 'utf8'));
+  const columns = new Set(db.prepare('PRAGMA table_info(user_courses)').all().map(column => column.name));
+  if (!columns.has('current_year')) db.exec('ALTER TABLE user_courses ADD COLUMN current_year INTEGER NOT NULL DEFAULT 1 CHECK (current_year BETWEEN 1 AND 4)');
+  if (!columns.has('revision')) db.exec('ALTER TABLE user_courses ADD COLUMN revision INTEGER NOT NULL DEFAULT 0 CHECK (revision >= 0)');
   db.type = 'sqlite';
   // 서버 쿼리는 PostgreSQL의 $1 형식을 사용하며, 값은 양쪽 DB에서 바인딩합니다.
   // SQL은 서버 상수만 허용합니다. 사용자 입력을 SQL 문자열에 연결하지 않습니다.

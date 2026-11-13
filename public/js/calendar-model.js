@@ -1,5 +1,5 @@
-export const MIN_CALENDAR_YEAR = 1900;
-export const MAX_CALENDAR_YEAR = 2100;
+export const MIN_CALENDAR_YEAR = 1;
+export const MAX_CALENDAR_YEAR = 9999;
 
 export function calendarMonth(year, month) {
   if (!Number.isInteger(year) || year < MIN_CALENDAR_YEAR || year > MAX_CALENDAR_YEAR

@@ -27,3 +27,9 @@ CREATE TABLE IF NOT EXISTS user_databases (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   storage_key TEXT NOT NULL UNIQUE CHECK(length(storage_key) = 64)
 );
+-- 이전 통합판의 저장 행은 보존하며 새 계정별 파일과 혼합하지 않습니다.
+CREATE TABLE IF NOT EXISTS user_courses (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  courses_json TEXT NOT NULL DEFAULT '[]',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

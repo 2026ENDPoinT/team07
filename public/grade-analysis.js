@@ -9,20 +9,30 @@ const message = document.querySelector("#analysis-message");
 const container = document.querySelector("#grade-dashboard");
 const semesterSelect = document.querySelector("#gpa-semester");
 
+// 학기를 실제 시간순(1학기 → 여름 → 2학기 → 겨울)으로 정렬하기 위한 값입니다.
+function semesterOrder(semester) {
+    const match = /^(\d{4})-(1|여름|2|겨울)$/.exec(semester);
+    if (!match) return -1; // 예상하지 못한 형식의 학기는 목록 맨 아래로 보냅니다.
+    const order = { "1": 1, "여름": 2, "2": 3, "겨울": 4 };
+    return Number(match[1]) * 10 + order[match[2]];
+}
+
 // 학기 선택 목록을 만들고 선택한 학기의 GPA를 표시합니다.
 function setupSemesterGpa(courses, latestCompletedSemester) {
     const semesters = [...new Set(courses
         .filter(course => ["completed", "in_progress"].includes(course.status))
         .map(course => course.semester)
-        .filter(semester => typeof semester === "string" && /^\d{4}-[12]$/.test(semester)))]
-        .sort((a, b) => b.localeCompare(a));
+        .filter(semester => typeof semester === "string" && /^\d{4}-(1|2|여름|겨울)$/.test(semester)))]
+        .sort((a, b) => semesterOrder(b) - semesterOrder(a));
     if (!semesters.length) return;
 
     semesterSelect.replaceChildren(...semesters.map(semester => {
         const option = document.createElement("option");
         const [year, term] = semester.split("-");
         option.value = semester;
-        option.textContent = `${year}년 ${term}학기`;
+        option.textContent = term === "여름" || term === "겨울"
+            ? `${year}년 ${term} 계절학기`
+            : `${year}년 ${term}학기`;
         return option;
     }));
     semesterSelect.value = latestCompletedSemester ?? semesters[0];

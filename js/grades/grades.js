@@ -26,6 +26,7 @@ export const GRADE_POINTS = {
 
 export const CATEGORIES = ["major", "minor", "general"];
 export const STATUSES = ["completed", "in_progress"];
+const SEMESTER_PATTERN = /^\d{4}-(1|2|여름|겨울)$/;
 
 // 화면에 보여줄 한글 이름
 export const CATEGORY_LABELS = { major: "전공", minor: "부전공", general: "교양" };
@@ -50,9 +51,11 @@ export function createCourse({
   grade = String(grade ?? "").trim().toUpperCase();
 
   if (!courseName) throw new Error("과목명을 입력해 주세요.");
-  if (!semester) throw new Error("학기를 입력해 주세요. (예: 2026-1)");
-  if (!Number.isFinite(credits) || credits <= 0) {
-    throw new Error("학점은 0보다 큰 숫자여야 해요.");
+  if (!SEMESTER_PATTERN.test(semester)) {
+    throw new Error("학기는 YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식으로 입력해 주세요.");
+  }
+  if (!Number.isInteger(credits) || credits < 1 || credits > 12) {
+    throw new Error("학점은 1~12 사이의 정수로 입력해 주세요.");
   }
   if (!CATEGORIES.includes(category)) {
     throw new Error("이수 구분은 " + CATEGORIES.join(", ") + " 중 하나여야 해요.");
@@ -70,8 +73,8 @@ export function createCourse({
     }
     const given = gradePoint === undefined || gradePoint === null || gradePoint === "";
     point = given ? GRADE_POINTS[grade] : Number(gradePoint);
-    if (!Number.isFinite(point) || point < 0) {
-      throw new Error("평점은 0 이상의 숫자여야 해요.");
+    if (!Number.isFinite(point) || point < 0 || point > 4.5) {
+      throw new Error("평점은 0 이상 4.5 이하의 숫자여야 해요.");
     }
   }
 

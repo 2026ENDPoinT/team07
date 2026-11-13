@@ -43,7 +43,7 @@ test('course edits persist per account; failed saves retain data and deleting al
 
     let courses = addCourse([], { courseName: '자료구조', credits: '3', grade: 'A+',
       semester: '2026-1', status: 'completed', category: 'major', isRetake: false });
-    courses = addCourse(courses, { courseName: '진로 세미나', credits: '0.5',
+    courses = addCourse(courses, { courseName: '진로 세미나', credits: '2',
       semester: '2026-2', status: 'in_progress', category: 'general', isRetake: false });
     let state = await save(first, { ...initial, courses, profile: { grade: 3 } });
     assert.equal(state.courses[0].gradePoint, 4.5);
