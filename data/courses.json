@@ -1,3 +1,64 @@
 {
-    "key 내용" : "value 값 >> 과목 데이터"
+  "courses": [
+    {
+      "courseName": "자료구조",
+      "credits": 3,
+      "grade": "A+",
+      "gradePoint": 4.5,
+      "semester": "2026-1",
+      "status": "completed",
+      "category": "major",
+      "isRetake": false
+    },
+    {
+      "courseName": "미적분학",
+      "credits": 3,
+      "grade": "A0",
+      "gradePoint": 4.0,
+      "semester": "2026-1",
+      "status": "completed",
+      "category": "general",
+      "isRetake": false
+    },
+    {
+      "courseName": "프로그래밍",
+      "credits": 3,
+      "grade": "B+",
+      "gradePoint": 3.5,
+      "semester": "2026-1",
+      "status": "completed",
+      "category": "major",
+      "isRetake": false
+    },
+    {
+      "courseName": "컴퓨터구조",
+      "credits": 3,
+      "grade": "B0",
+      "gradePoint": 3.0,
+      "semester": "2026-2",
+      "status": "completed",
+      "category": "major",
+      "isRetake": false
+    },
+    {
+      "courseName": "운영체제",
+      "credits": 3,
+      "grade": "F",
+      "gradePoint": 0.0,
+      "semester": "2026-2",
+      "status": "completed",
+      "category": "major",
+      "isRetake": false
+    },
+    {
+      "courseName": "영어",
+      "credits": 2,
+      "grade": null,
+      "gradePoint": null,
+      "semester": "2026-2",
+      "status": "in_progress",
+      "category": "general",
+      "isRetake": false
+    }
+  ]
 }

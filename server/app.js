@@ -9,6 +9,7 @@ import { hashPassword, verifyPassword } from './password.js';
 const SESSION_MS = 24 * 60 * 60 * 1000;
 const WINDOW_MS = 15 * 60 * 1000;
 const digest = token => createHash('sha256').update(token).digest('hex');
+
 // 화면에 필요한 파일만 등록해 서버 코드와 DB의 직접 접근을 막습니다.
 const staticFiles = new Map([
   ['/login.html', ['public/login.html', 'text/html; charset=utf-8']],
@@ -36,12 +37,14 @@ export async function createApp({
   accountLimit = 10
 } = {}) {
   origin = new URL(origin).origin;
+
   if (production && !origin.startsWith('https://')) throw new Error('Production APP_ORIGIN must use HTTPS.');
   if (![authLimit, accountLimit].every(value => Number.isSafeInteger(value) && value > 0)) {
     throw new Error('Authentication limits must be positive integers.');
   }
   const cookieName = production ? '__Host-team07_session' : 'team07_session';
   const db = openDatabase(dbPath);
+
   // 없는 계정도 해시 검증을 수행해 응답 시간으로 계정 존재를 추측하기 어렵게 합니다.
   const dummyHash = await hashPassword(randomBytes(32).toString('hex'));
   let activeHashes = 0;

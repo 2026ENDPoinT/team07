@@ -1,7 +1,5 @@
 # team07
 ENDPoinT 해커톤 2026 Team 07
-<<<<<<< Updated upstream
-=======
 
 ## 실행
 
@@ -17,4 +15,3 @@ Node.js 24.12.0 이상에서 `npm.cmd start`를 실행하고 [http://localhost:3
 · 졸업학점 계산 구현 (파일만 생성)
 
 · 성적 입력/조회 로직 추가
->>>>>>> Stashed changes
