@@ -171,14 +171,6 @@ section h2 {
     margin-top: 42px;
 }
 
-.graduation-section { margin-top: 32px; }
-.graduation-section .subtitle { line-height: 1.7; }
-.graduation-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-
-@media (max-width: 600px) {
-    .graduation-summary { grid-template-columns: 1fr; }
-}
-
 .menu-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);

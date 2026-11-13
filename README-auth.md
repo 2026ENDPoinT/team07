@@ -12,7 +12,7 @@ npm start
 
 브라우저에서 http://localhost:3000/login.html 에 접속합니다. Live Server나 HTML 파일 직접 열기는 사용하지 마세요. Node 서버가 화면과 API를 함께 제공합니다.
 
-회원가입 버튼으로 계정을 생성하면 자동 로그인됩니다. 회원가입·로그인 성공 시 `/index.html` 대시보드로 이동합니다. 로그인 중에 `/login.html`을 열어도 대시보드로 이동합니다. 기본 주소 `/`는 미로그인 시 로그인 화면, 로그인 시 대시보드로 연결됩니다. 로그인 상태는 최대 24시간 유지되며, 서버 재시작 후에도 유효한 세션이 유지됩니다. 계정과 세션 DB는 첫 실행 시 `storage/team07.db`에 자동 생성됩니다. 각 사용자의 과목·학년 DB는 학사 데이터 최초 조회 시 `storage/users/<64자리 난수>.db`에 생성됩니다. `DB_PATH`를 변경하면 해당 인증 DB와 같은 폴더의 `users/`를 사용합니다. `:memory:` 설정에서는 사용자 DB도 메모리에서 분리하며 디스크에 기록하지 않습니다.
+회원가입 버튼으로 계정을 생성하면 자동 로그인됩니다. 회원가입·로그인 성공 시 `/index.html` 대시보드로 이동합니다. 로그인 중에 `/login.html`을 열어도 대시보드로 이동합니다. 기본 주소 `/`는 미로그인 시 로그인 화면, 로그인 시 대시보드로 연결됩니다. 로그인 상태는 최대 24시간 유지되며, 서버 재시작 후에도 유효한 세션이 유지됩니다. 계정과 세션 DB는 첫 실행 시 `storage/team07.db`에 자동 생성됩니다.
 
 ## 파일
 
@@ -23,8 +23,6 @@ npm start
 - `server/app.js`: Node HTTP 서버, 인증 API, 세션·출처 검사
 - `server/password.js`: scrypt 비밀번호 해시 및 검증
 - `server/db.js`, `server/schema.sql`: SQLite DB 및 테이블 생성
-- `server/academic.js`: 사용자별 DB 선택, 학사 데이터 검증 및 버전 검사
-- `public/js/academic-api.js`: 로그인 계정에 연결된 학사 API 호출
 - `test/auth.test.js`: 인증 통합 테스트
 
 ## API
@@ -35,18 +33,10 @@ npm start
 | POST | `/api/auth/login` | `{ email, password }` → `{ user }` |
 | GET | `/api/auth/me` | `{ user: { id, email, name } }`; 미로그인 401 |
 | POST | `/api/auth/logout` | `{}` → `{ message }`, 서버 세션 폐기 |
-| GET | `/api/academic` | `{ courses, profile: { grade }, revision }` |
-| PUT | `/api/academic` | `{ courses, profile: { grade }, revision }` → 저장된 전체 데이터와 증가한 버전 |
 
 이름은 공백 제거 후 1~50자, 비밀번호는 15~128자입니다. 이메일은 앞뒤 공백 제거 및 소문자 변환 후 저장합니다. 오류 응답은 `{ message }`입니다. POST 요청은 `APP_ORIGIN`과 동일한 Origin 헤더가 필요합니다. 브라우저의 같은 출처 fetch에서는 자동 전송됩니다.
 
-학사 API는 유효한 로그인 세션과 `X-Account-Id: <현재 사용자 id>` 헤더가 필요합니다. 화면에서는 `createAcademicClient(user.id)`를 사용하세요. 이 헤더는 다른 탭에서 계정이 바뀌었는지 검사하는 용도이며, DB 선택에는 세션의 사용자 ID만 사용합니다. 누락·불일치는 403, 미로그인은 401입니다. PUT에는 같은 출처의 Origin과 JSON이 필요하며, 최신 조회 결과의 `revision`을 보내야 합니다. 다른 화면에서 먼저 수정했으면 409로 거부합니다. 저장 실패 시 화면의 기존 데이터는 유지합니다.
-
-과목은 최대 500개, 이름은 공백 제거 후 1~100자, 학점은 0.5~30의 0.5 단위, 학기는 `YYYY-1` 또는 `YYYY-2`, 학년은 1~4입니다. 서버는 자료형·중복 과목 ID·등급·이수 구분·수강 상태를 검사하고 평점을 등급으로 다시 계산합니다. 사용자 ID·DB 경로 등 정의되지 않은 필드나 쿼리 매개변수는 거부합니다. 학사 요청 본문은 최대 256 KiB, 인증 요청은 8 KiB입니다.
-
-기존 인증 DB는 새 매핑 테이블을 추가해 호환하며 계정·세션을 유지합니다. 개인 DB는 빈 목록·1학년으로 시작합니다. 소유자가 없는 브라우저 공용 `team07.courses`와 기존 학년 저장값은 자동으로 가져오거나 삭제하지 않습니다. 예시 JSON을 개인 과목으로 자동 등록하지 않습니다. 대시보드와 성적 분석은 모두 개인 API만 사용합니다.
-
-개인 데이터 API를 추가할 때는 `currentUser(req)`로 로그인 사용자를 확인하고 전용 저장소를 사용하세요. 클라이언트의 사용자 ID나 파일명으로 저장소를 선택하면 안 됩니다. 화면의 로그인 여부 확인만으로 데이터 접근을 보호할 수는 없습니다. 현재 서버는 필요한 파일 경로만 명시적으로 공개하므로 새 페이지를 추가할 때 `staticFiles`에도 등록해야 합니다. 공개된 학사 JSON은 예시 데이터이며 실제 계정의 학적·과목 데이터가 아닙니다.
+다른 페이지를 만들 때 `authRequest('me')`로 사용자 상태를 조회할 수 있습니다. 개인 데이터 API를 추가할 때는 `server/app.js`의 `currentUser(req)`로 로그인 사용자를 확인하고, 결과가 없으면 401을 반환하세요. 반환된 사용자 객체의 `id`로 데이터 소유자를 구분하세요. 화면의 로그인 여부 확인만으로 데이터 접근을 보호할 수는 없습니다. 현재 서버는 로그인·대시보드에 필요한 파일 경로만 명시적으로 공개하므로 새 페이지를 추가할 때 `staticFiles`에도 등록해야 합니다. 공개된 학사 JSON은 예시 데이터이며 실제 계정의 학적·과목 데이터가 아닙니다.
 
 ## 설정
 
@@ -68,12 +58,6 @@ npm start
 npm test
 ```
 
-테스트는 임시 DB로 실행하며 회원가입, 중복 방지, 잘못된 비밀번호, 세션 교체, 계정 분리, 재시작 후 유지, 만료, 로그아웃, 출처 검사, IP·계정 요청 제한 및 재시작 후 유지, 비공개 파일 접근 차단, 운영 쿠키 설정, 잘못된 JSON·자료형·과도한 본문, SQL 입력 처리, 중복 쿠키 및 비밀번호 해시 검증을 검사합니다. 학사 데이터는 기존 스키마 갱신, 실제 파일 분리, 과목·학년 저장 및 빈 목록 유지, 다른 사용자 지정 차단, 중복·동시 저장 충돌, 업로드 중 세션 폐기, 계정 ID 재사용 시 과거 DB 재사용 방지도 검사합니다. 화면은 `/login.html`에서 직접 확인할 수 있습니다.
+테스트는 임시 DB로 실행하며 회원가입, 중복 방지, 잘못된 비밀번호, 세션 교체, 계정 분리, 재시작 후 유지, 만료, 로그아웃, 출처 검사, IP·계정 요청 제한 및 재시작 후 유지, 비공개 파일 접근 차단, 운영 쿠키 설정, 잘못된 JSON·자료형·과도한 본문, SQL 입력 처리, 중복 쿠키 및 비밀번호 해시 검증을 검사합니다. 화면은 `/login.html`에서 직접 확인할 수 있습니다.
 
-인증 DB는 로컬 파일을 보존하면서 Git 추적에서 제외했으며 `storage/`는 `.gitignore`로 보호합니다. 과거 커밋에 포함된 DB는 기존 Git 이력에 남습니다. 그 파일에 실사용자 정보가 있다면 별도의 이력 정리가 필요합니다.
-
-개인 DB의 파일명 매핑은 인증 DB의 `user_databases` 테이블에만 보관하며 API에 공개하지 않습니다. 파일 내부의 키도 검사해 다른 사용자의 DB 파일로 잘못 교체되면 요청을 거부합니다. 개인 DB는 요청마다 닫아 사용자 수만큼 열린 파일이 누적되지 않게 합니다. DB 파일을 분리해도 서버 프로세스는 모든 파일에 접근할 수 있으므로 운영에서는 저장소와 백업에 서버 실행 계정만 접근하도록 Windows ACL 또는 OS 권한을 설정해야 합니다. 파일 분리는 저장 데이터 암호화를 제공하지 않습니다.
-
-백업·복원은 인증 DB와 `users/` 전체를 함께 보관해야 합니다. 서버를 중지한 상태에서 복사하거나 SQLite의 일관된 백업 절차를 사용하세요. 인증 DB의 WAL 파일도 고려해야 합니다. 계정을 DB에서 직접 삭제하면 파일 매핑은 삭제되지만 개인 DB 파일은 복구 가능성을 위해 자동 삭제하지 않습니다. 잔여 파일을 정리할 때는 별도 운영 절차가 필요합니다.
-
-보안 설계 참고: [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [OWASP Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html), [OWASP Multi-Tenant Security](https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html). 보안 설정과 테스트는 알려진 위험을 줄이기 위한 것으로 모든 취약점의 부재를 보장하지 않습니다.
+보안 설계 참고: [OWASP Password Storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html), [OWASP Authentication](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html). 보안 설정과 테스트는 알려진 위험을 줄이기 위한 것으로 모든 취약점의 부재를 보장하지 않습니다.

@@ -2,11 +2,9 @@
 import { calculateCurrentCredits } from "/js/credits/current.js";
 import { calculateEarnedCredits } from "/js/credits/earned.js";
 import { calculateCompletionCredits } from "/js/credits/completion.js";
-import { calculateGraduationCredits } from "/js/credits/graduation.js";
 import { calculateCumulativeGPA } from "/js/grades/gpa.js";
 import { addCourse, updateCourse, removeCourse, getCourses } from "/js/grades/grades.js";
 import { authRequest } from "/js/auth/api.js";
-import { createAcademicClient } from "/js/academic-api.js";
 
 const elements = {
     userName: document.querySelector("#user-name"),
@@ -16,10 +14,6 @@ const elements = {
     earnedCredits: document.querySelector("#earned-credits"),
     currentCredits: document.querySelector("#current-credits"),
     completionCredits: document.querySelector("#completion-credits"),
-    graduationTotalRemaining: document.querySelector("#graduation-total-remaining"),
-    graduationMajorRemaining: document.querySelector("#graduation-major-remaining"),
-    graduationTotalRequirement: document.querySelector("#graduation-total-requirement"),
-    graduationMajorRequirement: document.querySelector("#graduation-major-requirement"),
     courseList: document.querySelector("#course-list"),
     courseSemesterFilter: document.querySelector("#course-semester-filter"),
     courseCount: document.querySelector("#course-count"),
@@ -44,9 +38,8 @@ const elements = {
 let courses = [];
 let userInfo;
 let academicRequirements;
-let academicClient;
-let revision;
-let saving = false;
+let academicYearStorageKey;
+let usingExamples = false;
 let editingCourseId = null;
 let deletingCourseId = null;
 let formTrigger = null;
@@ -166,44 +159,68 @@ function renderFilteredCourses() {
 // 대시보드 요약 정보 갱신
 async function renderDashboard(user) {
     elements.userName.textContent = `${user.name}님`;
-    academicClient = createAcademicClient(user.id);
-    const [state, requirements] = await Promise.all([
-        academicClient.load(),
+    [userInfo, academicRequirements] = await Promise.all([
+        loadData("user_info"),
         loadData("academic_requirements")
     ]);
-    courses = state.courses;
-    userInfo = state.profile;
-    revision = state.revision;
-    academicRequirements = requirements;
+    const savedResponse = await fetch('/api/courses', { credentials: 'same-origin' });
+    if (!savedResponse.ok) throw new Error('서버에서 과목 데이터를 불러오지 못했습니다.');
+    const { courses: storedCourses } = await savedResponse.json();
+    usingExamples = storedCourses === null;
+    if (!usingExamples && !Array.isArray(storedCourses)) {
+        throw new Error("과목 데이터 형식이 올바르지 않습니다.");
+    }
+    if (usingExamples) {
+        const example = await loadData("courses");
+        courses = example.courses;
+        if (!Array.isArray(courses)) throw new Error("예시 과목 데이터 형식이 올바르지 않습니다.");
+    } else {
+        courses = storedCourses;
+    }
+    // 예시와 이전 저장 데이터에 ID가 없어도 과목별 수정·삭제가 가능하도록 합니다.
+    courses = courses.map(course => ({ ...course, id: course.id || crypto.randomUUID() }));
+    academicYearStorageKey = `endpoint:academic-year:${user.id}`;
+    let currentYear = Number(userInfo.grade);
+    try {
+        const savedYear = Number(localStorage.getItem(academicYearStorageKey));
+        if (Number.isInteger(savedYear) && savedYear >= 1 && savedYear <= 4) {
+            currentYear = savedYear;
+        }
+    } catch {
+        elements.currentYearMessage.textContent = "학년을 선택할 수 있지만 브라우저 설정으로 인해 저장값을 불러오지 못했습니다.";
+    }
+    userInfo.grade = Number.isInteger(currentYear) && currentYear >= 1 && currentYear <= 4
+        ? currentYear : 1;
     elements.currentYear.value = String(userInfo.grade);
     refreshDashboard();
     elements.currentYear.disabled = false;
     elements.addCourseButton.disabled = false;
 }
 
-// 선택한 학년도 로그인 계정 전용 DB에 저장합니다.
-async function changeCurrentYear() {
+// 선택한 학년으로 수료 기준을 갱신하고 사용자별로 브라우저에 저장합니다.
+function changeCurrentYear() {
     const year = Number(elements.currentYear.value);
     if (!Number.isInteger(year) || year < 1 || year > 4) return;
+    userInfo.grade = year;
+    refreshDashboard();
     try {
-        await commitState(courses, { grade: year });
-        elements.currentYearMessage.textContent = `${year}학년으로 변경했습니다. 내 계정에 저장했습니다.`;
-    } catch (error) {
-        elements.currentYear.value = String(userInfo.grade);
-        elements.currentYearMessage.textContent = error.message;
+        localStorage.setItem(academicYearStorageKey, String(year));
+        elements.currentYearMessage.textContent = `${year}학년으로 변경했습니다. 선택한 학년은 이 브라우저에 저장됩니다.`;
+    } catch {
+        elements.currentYearMessage.textContent = `${year}학년으로 변경했지만 저장하지 못했습니다. 새로고침하면 선택이 초기화됩니다.`;
     }
 }
 
 // 현재 과목과 학년을 기준으로 학점·GPA 요약과 과목 목록을 갱신합니다.
 function refreshDashboard() {
     elements.dataSource.textContent =
-        `내 계정에 저장된 과목 · 현재 학년: ${userInfo.grade}학년. ` +
-        "과목과 학년은 계정별로 저장됩니다. 수료·졸업 기준은 예시입니다.";
+        `${usingExamples ? "예시 과목 데이터" : "서버에 저장된 내 과목 데이터"} · ` +
+        `학과·수료 기준은 예시입니다 (${userInfo.department}). 현재 학년: ${userInfo.grade}학년. ` +
+        "과목은 로그인한 계정별로 서버에 저장됩니다.";
 
     const currentCredits = calculateCurrentCredits(courses);
     const earnedCredits = calculateEarnedCredits(courses);
     const gpaResult = calculateCumulativeGPA(courses);
-    const graduationCredits = calculateGraduationCredits(courses, academicRequirements);
 
     const targetYear = Number(userInfo.grade);
 
@@ -226,15 +243,6 @@ function refreshDashboard() {
 
     elements.completionCredits.textContent =
         formatNumber(completionCredits);
-
-    elements.graduationTotalRemaining.textContent =
-        formatNumber(graduationCredits.totalRemainingCredits);
-    elements.graduationMajorRemaining.textContent =
-        formatNumber(graduationCredits.majorRemainingCredits);
-    elements.graduationTotalRequirement.textContent =
-        `학점 · 전체 졸업 기준 ${formatNumber(academicRequirements.graduation.totalCredits)}학점`;
-    elements.graduationMajorRequirement.textContent =
-        `학점 · 전공 졸업 기준 ${formatNumber(academicRequirements.graduation.majorCredits)}학점`;
 
     refreshCourseSemesterFilter();
     renderFilteredCourses();
@@ -284,24 +292,19 @@ function closeCourseForm() {
 }
 
 // 변경된 과목을 저장하고 대시보드에 반영합니다.
-async function commitState(nextCourses, profile = userInfo) {
-    if (saving) throw new Error("저장 중입니다. 잠시 기다려 주세요.");
-    saving = true;
-    const controls = [elements.currentYear, elements.addCourseButton, elements.saveCourseButton,
-        elements.cancelCourseButton, elements.confirmDeleteButton, elements.cancelDeleteButton];
-    controls.forEach(control => { control.disabled = true; });
-    try {
-        // 서버 저장 성공 후에만 화면 상태를 변경해 실패 시 기존 데이터와 입력을 유지합니다.
-        const state = await academicClient.save({ courses: nextCourses, profile, revision });
-        courses = state.courses;
-        userInfo = state.profile;
-        revision = state.revision;
-        elements.currentYear.value = String(userInfo.grade);
-        refreshDashboard();
-    } finally {
-        saving = false;
-        controls.forEach(control => { control.disabled = false; });
-    }
+async function commitCourses(nextCourses) {
+    // 저장 성공 후에만 화면 상태를 변경해 저장 실패 시 입력을 유지합니다.
+    const response = await fetch('/api/courses', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ courses: nextCourses })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message || '서버 저장에 실패했습니다.');
+    courses = result.courses;
+    usingExamples = false;
+    refreshDashboard();
 }
 
 // 입력값을 검증해 과목을 추가하거나 수정하고 실패 원인을 표시합니다.
@@ -322,7 +325,7 @@ async function submitCourse(event) {
         const nextCourses = isEditing
             ? updateCourse(courses, editingCourseId, input)
             : addCourse(courses, input);
-        await commitState(nextCourses);
+        await commitCourses(nextCourses);
         closeCourseForm();
         showCourseMessage(isEditing ? "과목을 수정했습니다." : "과목을 추가했습니다.");
     } catch (error) {
@@ -332,7 +335,6 @@ async function submitCourse(event) {
 
 // 과목별 버튼 클릭을 받아 수정 폼 또는 삭제 확인창을 엽니다.
 function handleCourseAction(event) {
-    if (saving) return;
     const button = event.target.closest("button[data-course-id]");
     if (!button) return;
     const course = courses.find(item => item.id === button.dataset.courseId);
@@ -352,7 +354,7 @@ async function confirmDeleteCourse() {
     const course = courses.find(item => item.id === deletingCourseId);
     if (!course) return;
     try {
-        await commitState(removeCourse(courses, course.id));
+        await commitCourses(removeCourse(courses, course.id));
         elements.deleteDialog.close();
         if (editingCourseId === course.id) closeCourseForm();
         else if (elements.courseForm.hidden) elements.addCourseButton.focus();
