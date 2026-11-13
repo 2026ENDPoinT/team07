@@ -160,7 +160,15 @@
                             <input id="course-credits" name="credits" type="number" required min="0.5" max="30" step="0.5" value="3">
                         </label>
                         <label for="course-semester">학기
-                            <input id="course-semester" name="semester" type="text" required placeholder="예: 2026-1" pattern="[0-9]{4}-[12]" title="2026-1 또는 2026-2 형식으로 입력해 주세요.">
+                        <input
+                            id="course-semester"
+                            name="semester"
+                            type="text"
+                            required
+                            placeholder="예: 2026-1, 2026-여름"
+                            pattern="[0-9]{4}-(1|2|여름|겨울)"
+                            title="YYYY-1, YYYY-2, YYYY-summer, YYYY-winter 형식으로 입력해 주세요."
+                        >
                         </label>
                         <label for="course-category">이수 구분
                             <select id="course-category" name="category">
