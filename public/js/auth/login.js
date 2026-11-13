@@ -36,9 +36,9 @@ $('switch-mode').addEventListener('click', () => {
   $('password').autocomplete = signup ? 'new-password' : 'current-password';
   $('password').value = '';
   $('confirm').value = '';
-  $('title').textContent = signup ? '회원가입' : '로그인';
-  $('description').textContent = signup ? '이름과 이메일로 계정을 만들어 주세요.' : '계정으로 로그인해 주세요.';
-  $('switch-mode').textContent = signup ? '이미 계정이 있나요? 로그인' : '계정이 없나요? 회원가입';
+  $('title').textContent = signup ? '반가워요, 함께 시작해요' : '다시 만나 반가워요';
+  $('description').textContent = signup ? '나만의 학업 여정을 만들어 보세요.' : '오늘도 한 걸음, 목표에 가까워질 시간이에요.';
+  $('switch-mode').textContent = signup ? '이미 계정이 있으신가요? 로그인' : '아직 ENDPoinT 계정이 없으신가요? 회원가입';
   busy(false);
   message('');
 });

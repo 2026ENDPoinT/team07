@@ -1,268 +1,231 @@
 
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ENDPoinT | 학업 관리</title>
-    <link rel="stylesheet" href="/css/dashboard.css">
-    <script type="module" src="/js/dashboard.js"></script>
-</head>
-<body>
-    <div class="app-container">
-        <!-- 로그인 사용자 정보와 로그아웃 버튼 -->
-        <header class="topbar">
-            <a class="logo" href="/">
-                <span class="logo-icon">E</span>
-                <span>ENDPoinT</span>
-            </a>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ENDPoinT | 학업 관리</title>
+<link href="/css/dashboard.css" rel="stylesheet"/>
+<script src="/js/dashboard.js" type="module"></script>
+<link href="/css/design-system.css" rel="stylesheet"/></head>
+<body class="dashboard-page">
+<div class="app-container">
+<!-- 로그인 사용자 정보와 로그아웃 버튼 -->
+<header class="topbar"><a aria-label="ENDPoinT 홈으로 이동" class="logo" href="/">
+<span class="logo-icon">E</span>
+<span>ENDPoinT</span>
+</a><nav aria-label="주요 메뉴" class="primary-nav"><a aria-current="page" href="/index.html">대시보드</a><a href="/grade-analysis.html">성적 분석</a><a href="/calendar.html">캘린더</a><a href="/mypage.html">사용자 정보</a></nav><div class="user-area">
+<span id="user-name">사용자</span>
 
-            <div class="user-area">
-                <span id="user-name">사용자</span>
-                <a class="logout-button" href="/mypage.html">마이페이지</a>
-                <button id="logout-button" class="logout-button">
+<button class="logout-button" id="logout-button">
                     로그아웃
                 </button>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <section id="dday-notification" class="dday-notification" aria-labelledby="dday-notification-title" hidden>
-                <div class="section-heading">
-                    <h2 id="dday-notification-title">오늘은 D-Day입니다!</h2>
-                    <button id="dismiss-dday" class="secondary-button" type="button" aria-label="디데이 알림 닫기">닫기</button>
-                </div>
-                <div role="status" aria-live="polite" aria-atomic="true"><ul id="dday-notification-list"></ul></div>
-                <a href="/calendar.html">달력에서 일정 확인하기 →</a>
-            </section>
-            <p id="dday-message" class="dashboard-message" role="status" aria-live="polite"></p>
-            <section class="welcome-section">
-                <div>
-                    <p class="eyebrow">ACADEMIC MANAGEMENT SYSTEM</p>
-                    <h1>학업 대시보드</h1>
-                    <p class="subtitle">
-                        나의 학업 현황을 한눈에 확인하세요.
-                    </p>
-                    <p id="data-source" class="subtitle"></p>
-                    <!-- 선택한 학년을 수료 기준 잔여 학점 계산에 사용합니다. -->
-                    <div class="academic-year-setting">
-                        <label for="current-year">현재 학년</label>
-                        <select id="current-year" aria-describedby="current-year-message" aria-controls="completion-credits" disabled>
-                            <option value="" disabled selected>학년 선택</option>
-                            <option value="1">1학년</option>
-                            <option value="2">2학년</option>
-                            <option value="3">3학년</option>
-                            <option value="4">4학년</option>
-                        </select>
-                        <p id="current-year-message" role="status" aria-live="polite">선택한 학년의 수료 기준으로 잔여 학점을 계산합니다.</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- 과목 데이터로 계산한 GPA와 학점 요약 -->
-            <section class="summary-section" id="credit-section">
-                <h2>학업 현황</h2>
-
-                <div class="summary-grid">
-                    <article class="summary-card" id="gpa-section">
-                        <div class="card-heading">
-                            <span>누적 GPA</span>
-                            <span class="card-icon">G</span>
-                        </div>
-                        <strong id="cumulative-gpa">--</strong>
-                        <p>4.5 만점</p>
-                    </article>
-
-                    <article class="summary-card">
-                        <div class="card-heading">
-                            <span>취득 학점</span>
-                            <span class="card-icon">C</span>
-                        </div>
-                        <strong id="earned-credits">--</strong>
-                        <p>학점</p>
-                    </article>
-
-                    <article class="summary-card">
-                        <div class="card-heading">
-                            <span>현재 수강 학점</span>
-                            <span class="card-icon">S</span>
-                        </div>
-                        <strong id="current-credits">--</strong>
-                        <p>학점</p>
-                    </article>
-
-                    <article class="summary-card">
-                        <div class="card-heading">
-                            <span>수료 기준 잔여 학점</span>
-                            <span class="card-icon">R</span>
-                        </div>
-                        <strong id="completion-credits">--</strong>
-                        <p>학점</p>
-                    </article>
-                </div>
-            </section>
-
-            <!-- 수강 중 학점을 포함한 전체·전공 졸업 잔여 학점 -->
-            <section class="graduation-section" aria-labelledby="graduation-title" aria-describedby="graduation-note">
-                <h2 id="graduation-title">졸업까지 남은 학점</h2>
-                <p id="graduation-note" class="subtitle">전체 학기의 이수 완료 학점과 수강 중 학점을 합산한 예상 잔여 학점입니다. F 과목은 제외하며, 수강 중인 과목은 이수를 가정합니다. 졸업 기준은 예시입니다.</p>
-                <div class="summary-grid graduation-summary" role="status" aria-live="polite" aria-atomic="true">
-                    <article class="summary-card">
-                        <div class="card-heading">
-                            <span>전체 잔여 학점</span>
-                            <span class="card-icon" aria-hidden="true">T</span>
-                        </div>
-                        <strong id="graduation-total-remaining">--</strong>
-                        <p id="graduation-total-requirement">학점</p>
-                    </article>
-                    <article class="summary-card">
-                        <div class="card-heading">
-                            <span>전공 잔여 학점</span>
-                            <span class="card-icon" aria-hidden="true">M</span>
-                        </div>
-                        <strong id="graduation-major-remaining">--</strong>
-                        <p id="graduation-major-requirement">학점</p>
-                    </article>
-                </div>
-            </section>
-
-            <section class="menu-section">
-                <h2>주요 기능</h2>
-
-                <div class="menu-grid">
-                    <a href="/grade-analysis.html" class="menu-card">
-                        <span class="menu-icon">▥</span>
-                        <div>
-                            <h3>성적 분석 및 관리</h3>
-                            <p>학기별 그래프 및 성적 구간</p>
-                        </div>
-                        <span class="menu-arrow">→</span>
-                    </a>
-                    
-                    <a href="/calendar.html" class="menu-card">
-                        <span class="menu-icon" aria-hidden="true">▦</span>
-                        <div>
-                            <h3>일정 관리</h3>
-                            <p>나의 달력과 학업 일정 관리</p>
-                        </div>
-                        <span class="menu-arrow" aria-hidden="true">→</span>
-                    </a>
-                </div>
-            </section>
-
-            <!-- 학기별 과목 조회와 과목 추가·수정·삭제 -->
-            <section class="course-section" id="course-section">
-                <div class="section-heading">
-                    <div>
-                        <h2>과목 현황</h2>
-                        <p>과목을 추가하고 성적과 수강 상태를 관리하세요.</p>
-                    </div>
-                    <button id="add-course-button" type="button" class="primary-button" disabled>+ 과목 추가</button>
-                </div>
-
-                <div class="course-filter-bar">
-                    <label for="course-semester-filter">조회 학기</label>
-                    <select id="course-semester-filter" aria-controls="course-list" disabled>
-                        <option value="">전체 학기</option>
-                    </select>
-                    <p id="course-count" role="status" aria-live="polite"></p>
-                </div>
-
-                <!-- 과목 추가와 수정에서 공통으로 사용하는 입력 폼 -->
-                <form id="course-form" class="course-form" aria-labelledby="course-form-title" hidden>
-                    <h3 id="course-form-title">과목 추가</h3>
-                    <div class="course-form-grid">
-                        <label for="course-name">과목명
-                            <input id="course-name" name="courseName" type="text" required maxlength="100" placeholder="예: 자료구조">
-                        </label>
-                        <label for="course-credits">학점
-                            <input id="course-credits" name="credits" type="number" required min="1" max="12" step="1" value="3">
-                        </label>
-                        <label for="course-semester">학기
-                            <input
-                                id="course-semester"
-                                name="semester"
-                                type="text"
-                                required
-                                placeholder="예: 2026-1, 2026-여름"
-                                pattern="[0-9]{4}-(1|2|여름|겨울)"
-                                title="YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식으로 입력해 주세요."
-                            >
-                        </label>
-                        <label for="course-category">이수 구분
+</div>
+</header>
+<main class="main-content">
+<section aria-labelledby="dday-notification-title" class="dday-notification" hidden="" id="dday-notification">
+<div class="section-heading">
+<h2 id="dday-notification-title">오늘은 D-Day입니다!</h2>
+<button aria-label="디데이 알림 닫기" class="secondary-button" id="dismiss-dday" type="button">닫기</button>
+</div>
+<div aria-atomic="true" aria-live="polite" role="status"><ul id="dday-notification-list"></ul></div>
+<a href="/calendar.html">달력에서 일정 확인하기 →</a>
+</section>
+<p aria-live="polite" class="dashboard-message" id="dday-message" role="status"></p>
+<section class="welcome-section">
+<div>
+<p class="eyebrow">YOUR ACADEMIC COMPANION</p>
+<h1>오늘도 한 걸음 더</h1>
+<p class="subtitle">차곡차곡 쌓이는 나의 학업 현황을 확인해 보세요.</p>
+<p class="subtitle" id="data-source"></p>
+<!-- 선택한 학년을 수료 기준 잔여 학점 계산에 사용합니다. -->
+<div class="academic-year-setting">
+<label for="current-year">현재 학년</label>
+<select aria-controls="completion-credits" aria-describedby="current-year-message" disabled="" id="current-year">
+<option disabled="" selected="" value="">학년 선택</option>
+<option value="1">1학년</option>
+<option value="2">2학년</option>
+<option value="3">3학년</option>
+<option value="4">4학년</option>
+</select>
+<p aria-live="polite" id="current-year-message" role="status">선택한 학년의 수료 기준으로 잔여 학점을 계산합니다.</p>
+</div>
+</div>
+</section>
+<!-- 과목 데이터로 계산한 GPA와 학점 요약 -->
+<section class="summary-section" id="credit-section">
+<h2>나의 학업 요약</h2>
+<div class="summary-grid">
+<article class="summary-card highlight-metric" id="gpa-section">
+<div class="card-heading">
+<span>누적 GPA</span>
+<span class="card-icon">G</span>
+</div>
+<strong id="cumulative-gpa">--</strong>
+<p>4.5 만점</p>
+</article>
+<article class="summary-card">
+<div class="card-heading">
+<span>취득 학점</span>
+<span class="card-icon">C</span>
+</div>
+<strong id="earned-credits">--</strong>
+<p>학점</p>
+</article>
+<article class="summary-card">
+<div class="card-heading">
+<span>현재 수강 학점</span>
+<span class="card-icon">S</span>
+</div>
+<strong id="current-credits">--</strong>
+<p>학점</p>
+</article>
+<article class="summary-card">
+<div class="card-heading">
+<span>수료 기준 잔여 학점</span>
+<span class="card-icon">R</span>
+</div>
+<strong id="completion-credits">--</strong>
+<p>학점</p>
+</article>
+</div>
+</section>
+<!-- 수강 중 학점을 포함한 전체·전공 졸업 잔여 학점 -->
+<section aria-describedby="graduation-note" aria-labelledby="graduation-title" class="graduation-section"><div class="graduation-intro"><h2 id="graduation-title">졸업까지, 얼마나 왔을까요?</h2><div class="graduation-heading"><div class="progress-figures"><span class="progress-percent" id="graduation-progress-label">--</span><span class="progress-fraction" id="graduation-progress-fraction">취득 학점 기준</span></div><progress aria-label="전체 졸업 기준 대비 실제 취득 학점 달성률" id="graduation-progress" max="100" value="0"></progress><p class="graduation-caption">실제 취득 학점 기준의 진행률입니다. 아래 잔여 학점은 수강 중인 과목의 이수를 가정한 예상치입니다.</p></div><p class="subtitle" id="graduation-note">전체 학기의 이수 완료 학점과 수강 중 학점을 합산한 예상 잔여 학점입니다. F 과목은 제외하며, 수강 중인 과목은 이수를 가정합니다. 졸업 기준은 예시입니다.</p></div>
+<div aria-atomic="true" aria-live="polite" class="summary-grid graduation-summary" role="status">
+<article class="summary-card">
+<div class="card-heading">
+<span>전체 잔여 학점</span>
+<span aria-hidden="true" class="card-icon">T</span>
+</div>
+<strong id="graduation-total-remaining">--</strong>
+<p id="graduation-total-requirement">학점</p>
+</article>
+<article class="summary-card">
+<div class="card-heading">
+<span>전공 잔여 학점</span>
+<span aria-hidden="true" class="card-icon">M</span>
+</div>
+<strong id="graduation-major-remaining">--</strong>
+<p id="graduation-major-requirement">학점</p>
+</article>
+</div>
+</section>
+<!-- 학기별 과목 조회와 과목 추가·수정·삭제 -->
+<p aria-live="polite" class="dashboard-message" id="dashboard-message" role="status"></p>
+<div class="dashboard-lower"><section class="course-section" id="course-section">
+<div class="section-heading">
+<div>
+<h2>나의 수강 과목</h2>
+<p>학기를 선택하고 과목별 성적과 이수 현황을 관리해 보세요.</p>
+</div>
+<button class="primary-button" disabled="" id="add-course-button" type="button">+ 과목 추가</button>
+</div>
+<div class="course-filter-bar">
+<label for="course-semester-filter">조회 학기</label>
+<select aria-controls="course-list" disabled="" id="course-semester-filter">
+<option value="">전체 학기</option>
+</select>
+<p aria-live="polite" id="course-count" role="status"></p>
+</div>
+<!-- 과목 추가와 수정에서 공통으로 사용하는 입력 폼 -->
+<form aria-labelledby="course-form-title" class="course-form" hidden="" id="course-form">
+<h3 id="course-form-title">과목 추가</h3>
+<div class="course-form-grid">
+<label for="course-name">과목명
+                            <input id="course-name" maxlength="100" name="courseName" placeholder="예: 자료구조" required="" type="text"/>
+</label>
+<label for="course-credits">학점
+                            <input id="course-credits" max="12" min="1" name="credits" required="" step="1" type="number" value="3"/>
+</label>
+<label for="course-semester">학기
+                            <input id="course-semester" name="semester" pattern="[0-9]{4}-(1|2|여름|겨울)" placeholder="예: 2026-1, 2026-여름" required="" title="YYYY-1, YYYY-2, YYYY-여름, YYYY-겨울 형식으로 입력해 주세요." type="text"/>
+</label>
+<label for="course-category">이수 구분
                             <select id="course-category" name="category">
-                                <option value="major">전공</option>
-                                <option value="general">교양</option>
-                            </select>
-                        </label>
-                        <label for="course-status">수강 상태
+<option value="major">전공</option>
+<option value="general">교양</option>
+</select>
+</label>
+<label for="course-status">수강 상태
                             <select id="course-status" name="status">
-                                <option value="in_progress">수강 중</option>
-                                <option value="completed">이수 완료</option>
-                            </select>
-                        </label>
-                        <label for="course-grade">성적
-                            <select id="course-grade" name="grade" aria-describedby="course-grade-hint">
-                                <option value="">성적 선택</option>
-                                <option>A+</option><option>A0</option>
-                                <option>B+</option><option>B0</option>
-                                <option>C+</option><option>C0</option>
-                                <option>D+</option><option>D0</option><option>F</option>
-                            </select>
-                        </label>
-                    </div>
-                    <p id="course-grade-hint" class="form-hint">수강 중인 과목은 성적 없이 저장됩니다.</p>
-                    <label class="checkbox-label" for="course-retake">
-                        <input id="course-retake" name="isRetake" type="checkbox"> 재수강 과목
+<option value="in_progress">수강 중</option>
+<option value="completed">이수 완료</option>
+</select>
+</label>
+<label for="course-grade">성적
+                            <select aria-describedby="course-grade-hint" id="course-grade" name="grade">
+<option value="">성적 선택</option>
+<option>A+</option><option>A0</option>
+<option>B+</option><option>B0</option>
+<option>C+</option><option>C0</option>
+<option>D+</option><option>D0</option><option>F</option>
+</select>
+</label>
+</div>
+<p class="form-hint" id="course-grade-hint">수강 중인 과목은 성적 없이 저장됩니다.</p>
+<label class="checkbox-label" for="course-retake">
+<input id="course-retake" name="isRetake" type="checkbox"/> 재수강 과목
                     </label>
-                    <p id="course-form-message" class="dashboard-message" role="alert"></p>
-                    <div class="form-actions">
-                        <button type="submit" id="save-course-button" class="primary-button">추가</button>
-                        <button type="button" id="cancel-course-button" class="secondary-button">취소</button>
-                    </div>
-                </form>
-                <p id="course-message" class="course-message" role="status" aria-live="polite"></p>
-
-                <div class="table-wrapper">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>과목명</th>
-                                <th>학점</th>
-                                <th>성적</th>
-                                <th>학기</th>
-                                <th>상태</th>
-                                <th>관리</th>
-                            </tr>
-                        </thead>
-                        <tbody id="course-list">
-                            <tr>
-                                <td colspan="6" class="empty-message">
+<p class="dashboard-message" id="course-form-message" role="alert"></p>
+<div class="form-actions">
+<button class="primary-button" id="save-course-button" type="submit">추가</button>
+<button class="secondary-button" id="cancel-course-button" type="button">취소</button>
+</div>
+</form>
+<p aria-live="polite" class="course-message" id="course-message" role="status"></p>
+<div class="table-wrapper">
+<table>
+<thead>
+<tr><th>과목명</th><th>이수 구분</th><th>학점</th><th>성적</th><th>학기</th><th>상태</th><th>관리</th></tr>
+</thead>
+<tbody id="course-list">
+<tr>
+<td class="empty-message" colspan="7">
                                     과목 데이터를 불러오는 중입니다.
                                 </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
-
-            <p id="dashboard-message" class="dashboard-message"
-               role="status" aria-live="polite"></p>
-        </main>
-
-        <footer class="footer">
+</tr>
+</tbody>
+</table>
+</div>
+</section><div class="dashboard-side"><section aria-labelledby="upcoming-title" class="upcoming-panel">
+<div class="upcoming-heading"><div><h2 id="upcoming-title">다가오는 일정</h2><p>가까운 일정부터 자동으로 보여드려요.</p></div><a href="/calendar.html?view=list">전체 보기 →</a></div>
+<ul aria-live="polite" class="upcoming-events" id="upcoming-events"><li class="upcoming-empty">일정을 불러오는 중입니다.</li></ul>
+</section><section class="menu-section">
+<h2>빠른 이동</h2>
+<div class="menu-grid">
+<a class="menu-card" href="/grade-analysis.html">
+<span class="menu-icon">▥</span>
+<div>
+<h3>성적 분석 및 관리</h3>
+<p>학기별 그래프 및 성적 구간</p>
+</div>
+<span class="menu-arrow">→</span>
+</a>
+<a class="menu-card" href="/calendar.html">
+<span aria-hidden="true" class="menu-icon">▦</span>
+<div>
+<h3>일정 관리</h3>
+<p>나의 달력과 학업 일정 관리</p>
+</div>
+<span aria-hidden="true" class="menu-arrow">→</span>
+</a>
+</div>
+</section></div></div></main>
+<footer class="footer">
             ENDPoinT · Academic Management System
         </footer>
-    </div>
-    <!-- 과목을 삭제하기 전에 확인하는 대화상자 -->
-    <dialog id="delete-course-dialog" class="course-dialog" aria-labelledby="delete-course-title" aria-describedby="delete-course-description">
-        <h2 id="delete-course-title">과목 삭제</h2>
-        <p id="delete-course-description"></p>
-        <p id="delete-course-message" class="dashboard-message" role="alert"></p>
-        <div class="form-actions">
-            <button id="cancel-delete-course-button" type="button" class="secondary-button" autofocus>취소</button>
-            <button id="confirm-delete-course-button" type="button" class="delete-button">삭제</button>
-        </div>
-    </dialog>
+</div>
+<!-- 과목을 삭제하기 전에 확인하는 대화상자 -->
+<dialog aria-describedby="delete-course-description" aria-labelledby="delete-course-title" class="course-dialog" id="delete-course-dialog">
+<h2 id="delete-course-title">과목 삭제</h2>
+<p id="delete-course-description"></p>
+<p class="dashboard-message" id="delete-course-message" role="alert"></p>
+<div class="form-actions">
+<button autofocus="" class="secondary-button" id="cancel-delete-course-button" type="button">취소</button>
+<button class="delete-button" id="confirm-delete-course-button" type="button">삭제</button>
+</div>
+</dialog>
 </body>
 </html>

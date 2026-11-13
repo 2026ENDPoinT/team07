@@ -1,73 +1,68 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ENDPoinT | 성적 분석</title>
-    <link rel="stylesheet" href="/css/dashboard.css">
-    <script type="module" src="/js/grade-analysis.js"></script>
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>ENDPoinT | 성적 분석</title>
+<link href="/css/dashboard.css" rel="stylesheet"/>
+<script src="/js/grade-analysis.js" type="module"></script>
+<link href="/css/design-system.css" rel="stylesheet"/></head>
 <body class="analysis-page">
-    <div class="app-container">
-        <header class="topbar">
-            <a class="logo" href="/index.html">
-                <span class="logo-icon">E</span>
-                <span>ENDPoinT</span>
-            </a>
-            <div class="user-area">
-                <span id="user-name">사용자</span>
-                <a class="logout-button" href="/mypage.html">마이페이지</a>
-                <button id="logout-button" class="logout-button" type="button">로그아웃</button>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <nav class="analysis-navigation" aria-label="대시보드 이동">
-                <a class="secondary-button" href="/index.html">← 학업 대시보드로 돌아가기</a>
-            </nav>
-            <section class="welcome-section">
-                <p class="eyebrow">GRADE ANALYSIS</p>
-                <h1>성적 분석 대시보드</h1>
-                <p class="subtitle">학기별 성적 변화와 성적 구간을 한눈에 확인하세요.</p>
-                <p id="data-source" class="subtitle"></p>
-            </section>
-
-            <!-- 누적·선택 학기 GPA와 이수 성적이 있는 학기 수 -->
-            <section aria-label="성적 요약">
-                <div class="summary-grid analysis-summary">
-                    <article class="summary-card">
-                        <div class="card-heading"><span>누적 GPA</span><span class="card-icon">G</span></div>
-                        <strong id="analysis-gpa">--</strong>
-                        <p>4.5 만점 · 이수 완료 과목 기준</p>
-                    </article>
-                    <article class="summary-card">
-                        <div class="card-heading"><label for="gpa-semester">학기별 GPA</label><span class="card-icon">S</span></div>
-                        <select id="gpa-semester" class="gpa-semester-select" disabled>
-                            <option value="">학기 없음</option>
-                        </select>
-                        <div aria-live="polite" aria-atomic="true">
-                            <strong id="semester-gpa">--</strong>
-                            <p id="semester-gpa-description">이수 성적이 없습니다.</p>
-                        </div>
-                    </article>
-                    <article class="summary-card">
-                        <div class="card-heading"><span>분석 학기</span><span class="card-icon">▥</span></div>
-                        <strong id="semester-count">--</strong>
-                        <p>이수 성적이 있는 학기 수</p>
-                    </article>
-                </div>
-            </section>
-
-            <!-- JavaScript로 학기별 GPA 및 등급별 예상 인원 그래프와 표를 구성합니다. -->
-            <section class="graph-section" aria-label="학기별 그래프 및 성적 구간">
-                <p class="subtitle">학기별 그래프는 이수 완료 과목의 학점 가중 평균입니다. 성적 구간은 예시 상대평가 기준이며, 수강자 수와 비율을 바꾸면 예상 인원이 갱신됩니다.</p>
-                <div id="grade-dashboard" aria-busy="true">
-                    <p class="subtitle">성적 데이터를 불러오는 중입니다.</p>
-                </div>
-            </section>
-            <p id="analysis-message" class="dashboard-message" role="status" aria-live="polite"></p>
-        </main>
-        <footer class="footer">ENDPoinT · Academic Management System</footer>
-    </div>
+<div class="app-container">
+<header class="topbar"><a aria-label="ENDPoinT 홈으로 이동" class="logo" href="/index.html">
+<span class="logo-icon">E</span>
+<span>ENDPoinT</span>
+</a><nav aria-label="주요 메뉴" class="primary-nav"><a href="/index.html">대시보드</a><a aria-current="page" href="/grade-analysis.html">성적 분석</a><a href="/calendar.html">캘린더</a><a href="/mypage.html">사용자 정보</a></nav><div class="user-area">
+<span id="user-name">사용자</span>
+<button class="logout-button" id="logout-button" type="button">로그아웃</button>
+</div>
+</header>
+<main class="main-content">
+<nav aria-label="대시보드 이동" class="analysis-navigation">
+<a class="secondary-button" href="/index.html">← 학업 대시보드로 돌아가기</a>
+</nav>
+<section class="welcome-section"><div class="welcome-copy">
+<p class="eyebrow">GRADE ANALYSIS</p>
+<h1>성적 분석</h1>
+<p class="subtitle">쌓아온 노력을 확인하고, 다음 학기를 계획해 보세요.</p>
+<p class="subtitle" id="data-source"></p>
+</div></section>
+<!-- 누적·선택 학기 GPA와 이수 성적이 있는 학기 수 -->
+<section aria-label="성적 요약">
+<div class="summary-grid analysis-summary">
+<article class="summary-card">
+<div class="card-heading"><span>누적 GPA</span><span class="card-icon">G</span></div>
+<strong id="analysis-gpa">--</strong>
+<p>4.5 만점 · 이수 완료 과목 기준</p>
+</article>
+<article class="summary-card">
+<div class="card-heading"><label for="gpa-semester">학기별 GPA</label><span class="card-icon">S</span></div>
+<select class="gpa-semester-select" disabled="" id="gpa-semester">
+<option value="">학기 없음</option>
+</select>
+<div aria-atomic="true" aria-live="polite">
+<strong id="semester-gpa">--</strong>
+<p id="semester-gpa-description">이수 성적이 없습니다.</p>
+</div>
+</article>
+<article class="summary-card">
+<div class="card-heading"><span>분석 학기</span><span class="card-icon">▥</span></div>
+<strong id="semester-count">--</strong>
+<p>이수 성적이 있는 학기 수</p>
+</article>
+</div>
+</section>
+<!-- JavaScript로 학기별 GPA 및 등급별 예상 인원 그래프와 표를 구성합니다. -->
+<section aria-label="학기별 그래프 및 성적 구간" class="graph-section">
+<p class="subtitle">학기별 그래프는 이수 완료 과목의 학점 가중 평균입니다. 성적 구간은 예시 상대평가 기준이며, 수강자 수와 비율을 바꾸면 예상 인원이 갱신됩니다.</p>
+<div aria-busy="true" id="grade-dashboard">
+<p class="subtitle">성적 데이터를 불러오는 중입니다.</p>
+</div>
+</section>
+<p aria-live="polite" class="dashboard-message" id="analysis-message" role="status"></p>
+</main>
+<footer class="footer">ENDPoinT · Academic Management System</footer>
+</div>
 </body>
 </html>

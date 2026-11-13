@@ -78,3 +78,42 @@ export function sortedEvents(events, date) {
   return events.filter(event => !date || eventOccursOn(event, date)).sort((a, b) =>
     a.date.localeCompare(b.date) || a.time.localeCompare(b.time) || a.title.localeCompare(b.title, 'ko'));
 }
+
+
+// Week navigation is based on local calendar dates, but UTC arithmetic avoids DST shifts.
+export function shiftCalendarDate(key, days) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || !Number.isSafeInteger(days)) throw new RangeError('날짜를 확인해 주세요.');
+  const [year, month, day] = key.split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCHours(0, 0, 0, 0);
+  date.setUTCFullYear(year, month - 1, day + days);
+  if (date.getUTCFullYear() < MIN_CALENDAR_YEAR || date.getUTCFullYear() > MAX_CALENDAR_YEAR) return null;
+  return date.toISOString().slice(0, 10);
+}
+
+export function weekDates(key) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) throw new RangeError('날짜를 확인해 주세요.');
+  const [year, month, day] = key.split('-').map(Number);
+  const date = new Date(0);
+  date.setUTCFullYear(year, month - 1, day);
+  const mondayOffset = (date.getUTCDay() + 6) % 7;
+  const monday = shiftCalendarDate(key, -mondayOffset);
+  // At the supported calendar boundaries, omit dates beyond 0001/9999.
+  return Array.from({ length: 7 }, (_, index) => monday ? shiftCalendarDate(monday, index) : null);
+}
+
+// Events are not assigned a fabricated category: the existing schema has no `type`.
+export function upcomingCalendarEvents(events, today = dateKey(), currentTime = '00:00', limit = 5) {
+  const upcoming = events.filter(event => {
+    const range = eventRange(event);
+    if (range.endDate < today) return false;
+    if (range.endDate > today) return true;
+    if (!range.endTime) return true; // All-day events remain visible throughout today.
+    return range.endTime > currentTime;
+  });
+  return upcoming.sort((a, b) => {
+    const aKey = a.date < today ? today : a.date;
+    const bKey = b.date < today ? today : b.date;
+    return aKey.localeCompare(bKey) || a.time.localeCompare(b.time) || a.title.localeCompare(b.title, 'ko');
+  }).slice(0, limit);
+}
