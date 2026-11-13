@@ -4,3 +4,4 @@ node_modules/
 storage/
 *.log
 .npm-cache/
+.zip-reference/
