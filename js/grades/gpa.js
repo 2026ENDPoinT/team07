@@ -45,26 +45,30 @@ function calculateGPA(courses, semester = null, applyRetake = false) {
         course => course.status === "completed"
     );
 
+    // GPA 계산 대상 과목 (P/NP 제외)
+    const gpaCourses = completedCourses.filter(
+        course => course.gradePoint !== null
+    );
+
     //성적 평점 유효성 검사 : 0 미만 || 4.5 초과 throw
     completedCourses.forEach(course => {
         if (
-            course.gradePoint !== null &&
-            (!Number.isFinite(course.gradePoint) ||
+            !Number.isFinite(course.gradePoint) ||
             course.gradePoint < 0 ||
-            course.gradePoint > 4.5)
+            course.gradePoint > 4.5
         ) {
             throw new TypeError("성적 평점 데이터가 올바르지 않습니다.");
         }
     }); //isFinitie >> 값이 유한한 숫자인지 검사
 
     //평점 × 학점의 합
-    const totalGradePoints = completedCourses.reduce(
+    const totalGradePoints = gpaCourses.reduce(
         (sum, course) => sum + (course.credits * course.gradePoint),
         0
     ); 
 
     //GPA 산정 대상 학점 합
-    const gpaCredits = completedCourses.reduce(
+    const gpaCredits = gpaCourses.reduce(
         (sum, course) => sum + course.credits,
         0
     );
