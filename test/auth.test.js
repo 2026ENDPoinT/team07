@@ -61,8 +61,15 @@ test('dashboard assets, module imports, sample data and authenticated entry rout
     assert.equal(page.status, 200);
     assert.match(page.headers.get('content-type'), /^text\/html/);
     const html = await page.text();
+    assert.match(html, /href="\/grade-analysis\.html"/);
+    const analysis = await service.request('/grade-analysis.html');
+    assert.equal(analysis.status, 200);
+    assert.match(analysis.headers.get('content-type'), /^text\/html/);
+    const analysisHtml = await analysis.text();
+    assert.match(analysisHtml, /id="grade-dashboard"/);
+    assert.match(analysisHtml, /href="\/index\.html"/);
     // Follow actual HTML references and recursive ES module imports through HTTP.
-    const pending = [...html.matchAll(/(?:src|href)="(\/(?:css|js)\/[^"#]+)"/g)].map(match => match[1]);
+    const pending = [...(html + analysisHtml).matchAll(/(?:src|href)="(\/(?:css|js)\/[^"#]+)"/g)].map(match => match[1]);
     const visited = new Set();
     while (pending.length) {
       const path = pending.pop();

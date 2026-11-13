@@ -2,6 +2,7 @@
 const CATEGORIES = new Set(['all', 'major', 'general']);
 const GRADE_POINTS = { 'A+': 4.5, A0: 4, 'B+': 3.5, B0: 3, 'C+': 2.5, C0: 2, 'D+': 1.5, D0: 1, F: 0 };
 
+// 유효한 이수 완료 과목을 학기별로 묶어 학점 가중 평균을 계산합니다.
 export function calculateSemesterGpa(courses, category = 'all') {
   if (!Array.isArray(courses)) throw new TypeError('과목 데이터는 배열이어야 합니다.');
   if (!CATEGORIES.has(category)) throw new RangeError('구분은 all, major, general 중 하나여야 합니다.');
@@ -25,6 +26,7 @@ export function calculateSemesterGpa(courses, category = 'all') {
     .map(({ semester, total, credits }) => ({ semester, gpa: Math.round((total / credits + Number.EPSILON) * 100) / 100, credits }));
 }
 
+// 학기별 GPA를 4.5 만점의 SVG 꺾은선 그래프로 표시합니다.
 export function renderSemesterGraph(container, courses, category = 'all') {
   if (typeof Element === 'undefined' || !(container instanceof Element)) throw new TypeError('container는 DOM 요소여야 합니다.');
   const data = calculateSemesterGpa(courses, category);

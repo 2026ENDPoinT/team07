@@ -14,11 +14,13 @@ const digest = token => createHash('sha256').update(token).digest('hex');
 const staticFiles = new Map([
   ['/login.html', ['public/login.html', 'text/html; charset=utf-8']],
   ['/index.html', ['public/index.html', 'text/html; charset=utf-8']],
+  ['/grade-analysis.html', ['public/grade-analysis.html', 'text/html; charset=utf-8']],
   ['/css/auth.css', ['public/css/auth.css', 'text/css; charset=utf-8']],
   ['/css/dashboard.css', ['public/css/dashboard.css', 'text/css; charset=utf-8']],
   ['/js/auth/api.js', ['public/js/auth/api.js', 'text/javascript; charset=utf-8']],
   ['/js/auth/login.js', ['public/js/auth/login.js', 'text/javascript; charset=utf-8']],
   ['/js/dashboard.js', ['public/dashboard.js', 'text/javascript; charset=utf-8']],
+  ['/js/grade-analysis.js', ['public/grade-analysis.js', 'text/javascript; charset=utf-8']],
   ...[
     'credits/current.js', 'credits/earned.js', 'credits/completion.js',
     'grades/grades.js', 'grades/gpa.js',
@@ -147,6 +149,7 @@ export async function createApp({
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     const path = new URL(req.url, 'http://localhost').pathname;
+    // 첫 화면은 로그인 상태에 따라 이동시키고, 등록된 정적 파일만 제공합니다.
     if (!path.startsWith('/api/')) {
       if (!['GET', 'HEAD'].includes(req.method)) return json(res, 405, { message: '지원하지 않는 메서드입니다.' });
       if (path === '/') {

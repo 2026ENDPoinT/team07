@@ -95,6 +95,18 @@ export function addCourse(courses, input) {
   return [...courses, createCourse(input)];
 }
 
+// 기존 과목의 ID를 유지하면서 입력값과 성적에 따른 평점을 검증합니다.
+export function updateCourse(courses, id, input) {
+  const course = courses.find(c => c.id === id);
+  if (!course) throw new Error("수정할 과목을 찾을 수 없습니다.");
+  const gradeChanged = Object.hasOwn(input, "grade") &&
+    String(input.grade ?? "").trim().toUpperCase() !== course.grade;
+  const gradePoint = Object.hasOwn(input, "gradePoint") ? input.gradePoint :
+    gradeChanged ? undefined : course.gradePoint;
+  const updated = { ...course, ...createCourse({ ...course, ...input, gradePoint }), id };
+  return courses.map(c => c.id === id ? updated : c);
+}
+
 // 과목 하나를 뺀 새 배열을 돌려주기. (잘못 입력했을 때 지우는 용도)
 export function removeCourse(courses, id) {
   return courses.filter((c) => c.id !== id);
@@ -152,21 +164,23 @@ export function summarize(courses) {
 
 let memoryStore = "[]"; // localStorage가 없는 환경(테스트 등)에서 쓰는 임시 저장소
 
+// 과목 배열을 JSON으로 저장하고 저장 실패는 호출한 화면에 알립니다.
 export function saveCourses(courses) {
   const text = JSON.stringify(courses);
   try {
     if (typeof localStorage === "undefined") memoryStore = text;
     else localStorage.setItem(STORAGE_KEY, text);
-  } catch {
-    // 저장에 실패해도 프로그램이 멈추지 않게 무시.
+  } catch (cause) {
+    throw new Error("과목을 저장하지 못했습니다. 브라우저의 저장 공간과 권한을 확인해 주세요.", { cause });
   }
 }
 
-export function loadCourses() {
+// 저장된 과목을 읽고, 데이터가 없거나 읽기에 실패하면 기본값을 반환합니다.
+export function loadCourses({ fallback = [] } = {}) {
   try {
     const text = typeof localStorage === "undefined" ? memoryStore : localStorage.getItem(STORAGE_KEY);
-    return text ? JSON.parse(text) : [];
+    return text ? JSON.parse(text) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 }

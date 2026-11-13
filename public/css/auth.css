@@ -1,3 +1,4 @@
+/* 인증 화면의 기본 색상·글꼴과 중앙 정렬 */
 :root { color-scheme: light; font-family: "Segoe UI", "Malgun Gothic", sans-serif; color: #172c3c; background: #eff3f7; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -7,6 +8,7 @@ body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding
 h1 { font-size: 28px; margin: 24px 0 10px; }
 .description, .hint { color: #526679; line-height: 1.65; }
 .hint { font-size: 12px; margin-top: 8px; }
+/* 로그인·회원가입 입력 항목과 버튼 상태 */
 label { display: block; margin: 20px 0 8px; font-size: 14px; font-weight: 600; }
 input { width: 100%; padding: 13px 12px; font: inherit; border: 1px solid #b6c5d2; border-radius: 8px; }
 input:focus-visible, button:focus-visible { outline: 3px solid #92bbf6; outline-offset: 3px; }
@@ -15,7 +17,9 @@ button:hover { background: #1a487f; }
 button:disabled { opacity: .6; cursor: wait; }
 .secondary { margin-top: 12px; background: transparent; color: #245b9f; font-size: 14px; }
 .secondary:hover { background: #edf3fa; }
+/* 처리 안내와 오류 메시지 */
 #message { margin-bottom: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
 #message[data-error="true"] { color: #ad2233; }
 #welcome { overflow-wrap: anywhere; }
+/* 모바일 화면에서는 카드와 바깥 여백을 줄입니다. */
 @media (max-width: 480px) { .card { padding: 24px; } body { padding: 16px; } }

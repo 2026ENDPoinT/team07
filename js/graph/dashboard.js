@@ -58,6 +58,7 @@ export function mountGradeDashboard(container, { courses = [], gradingPolicy = n
   section.append(title, categoryLabel, graph, rangeTitle, countLabel, ratioGroup, rangeResult, message);
   container.replaceChildren(section);
 
+  // 선택한 이수 구분에 맞춰 학기별 GPA 그래프를 다시 그립니다.
   function refreshGraph() {
     try {
       const list = Array.isArray(currentCourses) ? currentCourses : currentCourses?.courses;
@@ -68,6 +69,7 @@ export function mountGradeDashboard(container, { courses = [], gradingPolicy = n
     }
   }
 
+  // 수강자 수와 등급별 비율을 확인해 예상 인원 그래프와 표를 갱신합니다.
   function refreshRanges() {
     rangeResult.replaceChildren();
     message.textContent = '';
@@ -102,6 +104,7 @@ export function mountGradeDashboard(container, { courses = [], gradingPolicy = n
   countInput.addEventListener('input', refreshRanges);
   for (const input of ratioInputs.values()) input.addEventListener('input', refreshRanges);
 
+  // 외부에서 받은 과목과 평가 기준을 입력란 및 그래프에 반영합니다.
   function update({ courses: nextCourses = currentCourses, gradingPolicy: nextPolicy = currentPolicy } = {}) {
     currentCourses = nextCourses;
     currentPolicy = nextPolicy;
