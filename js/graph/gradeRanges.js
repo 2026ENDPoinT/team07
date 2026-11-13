@@ -44,6 +44,70 @@ export function calculateGradeRanges(studentCount, gradingPolicy) {
   return allocated.map(({ grade, percentage, count }) => ({ grade, percentage: Number(percentage.toFixed(8)), count }));
 }
 
+/** 상대평가 예상 인원을 SVG 막대그래프로 표현한다. */
+export function renderGradeRangeBarChart(container, result) {
+  if (typeof Element === 'undefined' || !(container instanceof Element)) {
+    throw new TypeError('container는 DOM 요소여야 합니다.');
+  }
+  const ns = 'http://www.w3.org/2000/svg';
+  const svgEl = (tag, attrs = {}, text = null) => {
+    const el = document.createElementNS(ns, tag);
+    for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, String(value));
+    if (text != null) el.textContent = text;
+    return el;
+  };
+
+  const width = 720;
+  const height = 320;
+  const left = 52;
+  const right = 18;
+  const top = 38;
+  const bottom = 56;
+  const plotWidth = width - left - right;
+  const plotHeight = height - top - bottom;
+  const maxCount = Math.max(1, ...result.map(item => item.count));
+  const tickStep = Math.max(1, Math.ceil(maxCount / 5));
+  const axisMax = Math.ceil(maxCount / tickStep) * tickStep;
+
+  const svg = svgEl('svg', {
+    viewBox: `0 0 ${width} ${height}`,
+    role: 'img',
+    'aria-label': `등급별 예상 인원 막대그래프: ${result.map(item => `${item.grade} ${item.count}명`).join(', ')}`,
+    style: 'display:block;width:100%;max-width:760px;height:auto;'
+  });
+  svg.append(svgEl('title', {}, '학점구간별 예상 인원 막대그래프'));
+
+  for (let tick = 0; tick <= axisMax; tick += tickStep) {
+    const y = top + plotHeight * (1 - tick / axisMax);
+    svg.append(svgEl('line', { x1: left, y1: y, x2: width - right, y2: y,
+      stroke: '#e2e8f0', 'stroke-width': 1 }));
+    svg.append(svgEl('text', { x: left - 10, y: y + 4, 'text-anchor': 'end',
+      'font-size': 12, fill: '#475569' }, String(tick)));
+  }
+  svg.append(svgEl('text', { x: left, y: 19, 'font-size': 13, fill: '#334155' }, '예상 인원 (명)'));
+
+  const slot = plotWidth / Math.max(1, result.length);
+  const barWidth = Math.min(56, slot * 0.62);
+  result.forEach((item, i) => {
+    const x = left + slot * (i + 0.5);
+    const barHeight = item.count / axisMax * plotHeight;
+    const y = top + plotHeight - barHeight;
+    const bar = svgEl('rect', {
+      x: x - barWidth / 2, y, width: barWidth, height: barHeight,
+      rx: 4, fill: '#2563eb'
+    });
+    bar.append(svgEl('title', {}, `${item.grade}: ${item.count}명 (${item.percentage}%)`));
+    svg.append(bar);
+    svg.append(svgEl('text', { x, y: Math.max(top + 13, y - 7),
+      'text-anchor': 'middle', 'font-size': 13, 'font-weight': 600,
+      fill: '#1e293b' }, `${item.count}명`));
+    svg.append(svgEl('text', { x, y: height - bottom + 22,
+      'text-anchor': 'middle', 'font-size': 13, fill: '#334155' }, item.grade));
+  });
+  container.replaceChildren(svg);
+  return svg;
+}
+
 export function renderGradeRanges(container, studentCount, gradingPolicy) {
   if (typeof Element === 'undefined' || !(container instanceof Element)) {
     throw new TypeError('container는 DOM 요소여야 합니다.');
@@ -68,6 +132,9 @@ export function renderGradeRanges(container, studentCount, gradingPolicy) {
     tbody.append(row);
   }
   table.append(tbody);
-  container.replaceChildren(table);
+  const chart = document.createElement('div');
+  chart.className = 'grade-range-bar-chart';
+  renderGradeRangeBarChart(chart, result);
+  container.replaceChildren(chart, table);
   return result;
 }
