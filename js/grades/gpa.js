@@ -1,4 +1,4 @@
-import { getEffectiveCourses } from "./grades.js";
+import { getEffectiveCourses, resolveGpaGradePoint } from "./grades.js";
 
 //gpa 계산 구현 스크립트
 //@param {Array} courses 과목 데이터 배열
@@ -45,32 +45,21 @@ function calculateGPA(courses, semester = null, applyRetake = false) {
         course => course.status === "completed"
     );
 
-    // GPA 계산 대상 과목 (P/NP 제외)
-    const gpaCourses = completedCourses.filter(
-        course => course.gradePoint !== null
-    );
+    // P/NP는 GPA에서 제외합니다. 과거 DB의 문자열/누락 평점은 성적 등급으로 보완합니다.
+    // 원본 과목과 Supabase 데이터는 변경하지 않습니다.
+    const gpaCourses = completedCourses
+        .map(course => ({ course, point: resolveGpaGradePoint(course) }))
+        .filter(item => item.point !== null);
 
-    //성적 평점 유효성 검사 : 0 미만 || 4.5 초과 throw
-    completedCourses.forEach(course => {
-        if (
-            course.gradePoint !== null
-            (!Number.isFinite(course.gradePoint) ||
-            course.gradePoint < 0 ||
-            course.gradePoint > 4.5)
-        ) {
-            throw new TypeError("성적 평점 데이터가 올바르지 않습니다.");
-        }
-    }); //isFinitie >> 값이 유한한 숫자인지 검사
-
-    //평점 × 학점의 합
+    // 평점 × 학점의 합
     const totalGradePoints = gpaCourses.reduce(
-        (sum, course) => sum + (course.credits * course.gradePoint),
+        (sum, { course, point }) => sum + course.credits * point,
         0
-    ); 
+    );
 
     //GPA 산정 대상 학점 합
     const gpaCredits = gpaCourses.reduce(
-        (sum, course) => sum + course.credits,
+        (sum, { course }) => sum + course.credits,
         0
     );
 

@@ -1,6 +1,6 @@
+import { resolveGpaGradePoint } from "../grades/grades.js";
 /** 학기별 이수 과목의 학점 가중 평균평점(GPA)과 SVG 그래프. */
 const CATEGORIES = new Set(['all', 'major', 'general']);
-const GRADE_POINTS = { 'A+': 4.5, A0: 4, 'B+': 3.5, B0: 3, 'C+': 2.5, C0: 2, 'D+': 1.5, D0: 1, F: 0 };
 
 // 학기를 실제 시간순(1학기 → 여름 → 2학기 → 겨울)으로 정렬하기 위한 값입니다.
 function semesterOrder(semester) {
@@ -20,10 +20,12 @@ export function calculateSemesterGpa(courses, category = 'all') {
     if (category !== 'all' && course.category !== category) continue;
     if (typeof course.semester !== 'string' || !/^\d{4}-(1|2|여름|겨울)$/.test(course.semester)) continue;
     const credits = course.credits;
-    const point = course.gradePoint == null || course.gradePoint === ''
-      ? GRADE_POINTS[course.grade] : course.gradePoint;
+    // 대시보드와 같은 방식으로 이전 평점 데이터를 해석합니다.
+    let point;
+    try { point = resolveGpaGradePoint(course); }
+    catch { continue; }
     if (typeof credits !== 'number' || !Number.isFinite(credits) || credits <= 0 ||
-        typeof point !== 'number' || !Number.isFinite(point) || point < 0 || point > 4.5) continue;
+        point === null) continue;
     const item = grouped.get(course.semester) ?? { semester: course.semester, total: 0, credits: 0 };
     item.total += credits * point;
     item.credits += credits;

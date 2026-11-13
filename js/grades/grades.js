@@ -31,6 +31,27 @@ const SEMESTER_PATTERN = /^\d{4}-(1|2|여름|겨울)$/;
 // 화면에 보여줄 한글 이름
 export const CATEGORY_LABELS = { major: "전공", double_major: "복수전공", minor: "부전공", general: "교양" };
 
+// 저장소 이전 데이터에는 gradePoint가 누락되거나 문자열로 저장되어 있을 수 있습니다.
+// P/NP는 이수 완료여도 GPA에서 제외하며, 기존 숫자 평점은 유지합니다.
+export function resolveGpaGradePoint(course) {
+  const grade = course?.grade;
+  if (grade === 'P' || grade === 'NP') return null;
+
+  const raw = course?.gradePoint;
+  if (raw === null || raw === undefined || raw === '' ||
+      (typeof raw === 'string' && raw.trim() === '')) {
+    if (Object.hasOwn(GRADE_POINTS, grade)) return GRADE_POINTS[grade];
+    throw new TypeError('성적 평점 데이터가 올바르지 않습니다.');
+  }
+
+  // 이전 JSON에서 평점이 "3.5" 같은 문자열로 저장된 경우만 숫자로 해석합니다.
+  const point = typeof raw === 'string' ? Number(raw) : raw;
+  if (!Number.isFinite(point) || point < 0 || point > 4.5) {
+    throw new TypeError('성적 평점 데이터가 올바르지 않습니다.');
+  }
+  return point;
+}
+
 // ---------- 입력 ----------
 
 // 입력값을 검사하고 과목 객체 하나를 만듦. 잘못된 값이면 Error를 던짐.
