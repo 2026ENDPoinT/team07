@@ -76,7 +76,7 @@ export function createCourse({
     }
     const given = gradePoint === undefined || gradePoint === null || gradePoint === "";
     point = given ? GRADE_POINTS[grade] : Number(gradePoint);
-    if (!Number.isFinite(point) || point < 0 || point > 4.5) {
+    if (!Number.isFinite(point) || point < 0 || point > 4.5 || point == null) {
       throw new Error("평점은 0 이상 4.5 이하의 숫자여야 해요.");
     }
     if (isRetake && GRADE_POINTS[grade] > GRADE_POINTS["A0"]) {
