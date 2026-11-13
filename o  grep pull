@@ -1,0 +1,22 @@
+[33m8c1e670[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mcodex/merge-render-supabase[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{2026-11-13 23:06:43 +0900}: checkout: moving from main to codex/merge-render-supabase
+[33m8c1e670[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mcodex/merge-render-supabase[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m, [m[1;32mmain[m[33m)[m HEAD@{2026-11-13 22:36:37 +0900}: commit: 계정별 db 나누어짐
+[33ma7012a1[m HEAD@{2026-11-13 22:05:29 +0900}: pull origin main: Fast-forward
+[33m3f0aa3e[m HEAD@{2026-11-13 22:01:04 +0900}: commit (merge): Merge origin/main into main
+[33me770180[m HEAD@{2026-11-13 21:54:03 +0900}: commit: 필수구현사항 완료
+[33m644fc04[m HEAD@{2026-11-13 20:46:45 +0900}: commit (merge): 로컬 작업과 origin/main 병합
+[33m78c53b3[m[33m ([m[1;32mcodex/backup-main-20261113[m[33m)[m HEAD@{2026-11-13 20:33:20 +0900}: checkout: moving from main to main
+[33m78c53b3[m[33m ([m[1;32mcodex/backup-main-20261113[m[33m)[m HEAD@{2026-11-13 20:24:14 +0900}: commit: 테스트
+[33mebba223[m HEAD@{2026-11-13 20:23:16 +0900}: commit: js 싹다 연동
+[33m02f1555[m HEAD@{2026-11-13 20:20:16 +0900}: commit: 웹페이지 싹다 연동
+[33m4156033[m HEAD@{2026-11-13 20:17:48 +0900}: checkout: moving from feature/login-system to main
+[33mc38d2c4[m[33m ([m[1;31morigin/feature/login-system[m[33m, [m[1;32mfeature/login-system[m[33m)[m HEAD@{2026-11-13 20:17:47 +0900}: reset: moving to HEAD
+[33mc38d2c4[m[33m ([m[1;31morigin/feature/login-system[m[33m, [m[1;32mfeature/login-system[m[33m)[m HEAD@{2026-11-13 19:56:19 +0900}: pull origin main: Fast-forward
+[33mea67d3b[m HEAD@{2026-11-13 19:50:26 +0900}: pull origin main: Fast-forward
+[33m9d9dc08[m HEAD@{2026-11-13 19:43:20 +0900}: commit: 로그인 시스템 주석 첨부
+[33m62ce8bc[m HEAD@{2026-11-13 19:33:47 +0900}: pull origin main: Fast-forward
+[33m04e1c83[m HEAD@{2026-11-13 19:26:28 +0900}: pull origin main: Fast-forward
+[33m3ab75df[m HEAD@{2026-11-13 19:01:37 +0900}: pull origin main: Fast-forward
+[33m9c52f5a[m HEAD@{2026-11-12 11:31:16 +0900}: pull origin main: Fast-forward
+[33m477049e[m HEAD@{2026-11-09 23:51:50 +0900}: commit: 회원가입 및 세션 기반 로그인 시스템 구현 (README-auth 참조)
+[33m4156033[m HEAD@{2026-11-09 23:34:45 +0900}: checkout: moving from main to feature/login-system
+[33m4156033[m HEAD@{2026-11-09 20:41:19 +0900}: initial pull
