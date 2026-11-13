@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { openDatabase } from './db.js';
 import { hashPassword, verifyPassword } from './password.js';
-import { createAcademicStore, validateAcademicState } from './academic.js';
+import { validateAcademicState, createAcademicStore } from './academic-state.js';
 
 const SESSION_MS = 24 * 60 * 60 * 1000;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -47,8 +47,11 @@ export async function createApp({
     throw new Error('Authentication limits must be positive integers.');
   }
   const cookieName = production ? '__Host-team07_session' : 'team07_session';
-  const db = openDatabase(dbPath);
-  const academic = createAcademicStore(db, dbPath);
+  if (process.env.RENDER && !process.env.DATABASE_URL) {
+    throw new Error('Render requires DATABASE_URL for persistent Supabase PostgreSQL.');
+  }
+  const db = await openDatabase(dbPath);
+  const academic = createAcademicStore(db);
 
   // 없는 계정도 해시 검증을 수행해 응답 시간으로 계정 존재를 추측하기 어렵게 합니다.
   const dummyHash = await hashPassword(randomBytes(32).toString('hex'));
@@ -71,37 +74,37 @@ export async function createApp({
     res.setHeader('Set-Cookie', `${cookieName}=${token}; Path=/; Max-Age=${maxAge}; HttpOnly; SameSite=Lax${production ? '; Secure' : ''}`);
   }
   // 현재 요청의 세션을 DB에서 삭제해 더 이상 사용할 수 없게 합니다.
-  function revoke(req) {
+  async function revoke(req) {
     const token = tokenFrom(req);
-    if (token) db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(digest(token));
+    if (token) await db.query('DELETE FROM sessions WHERE token_hash = ?', [digest(token)]);
   }
   // 기존 세션을 교체하고 24시간 유효한 새 세션을 발급합니다. DB에는 해시만 저장합니다.
-  function startSession(req, res, userId) {
-    revoke(req);
-    db.prepare('DELETE FROM sessions WHERE expires_at <= ?').run(Date.now());
+  async function startSession(req, res, userId) {
+    await revoke(req);
+    await db.query('DELETE FROM sessions WHERE expires_at <= ?', [Date.now()]);
     const token = randomBytes(32).toString('hex');
-    db.prepare('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)').run(digest(token), userId, Date.now() + SESSION_MS);
+    await db.query('INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)', [digest(token), userId, Date.now() + SESSION_MS]);
     cookie(res, token, SESSION_MS / 1000);
   }
   // 만료되지 않은 세션의 사용자를 조회합니다. 개인 데이터 접근 시 이 사용자의 ID를 사용합니다.
-  function currentUser(req) {
+  async function currentUser(req) {
     const token = tokenFrom(req);
-    return token ? db.prepare(`SELECT u.id, u.email, u.name FROM sessions s
-      JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?`).get(digest(token), Date.now()) : undefined;
+    return token ? (await db.query(`SELECT u.id, u.email, u.name FROM sessions s
+      JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?`, [digest(token), Date.now()])).rows[0] : undefined;
   }
   // IP 또는 계정별 요청 횟수를 DB에 기록하고 15분 동안의 허용 횟수를 검사합니다.
-  function allowAttempt(res, bucket, limit) {
+  async function allowAttempt(res, bucket, limit) {
     const now = Date.now();
-    db.prepare('DELETE FROM auth_attempts WHERE expires_at <= ?').run(now);
+    await db.query('DELETE FROM auth_attempts WHERE expires_at <= ?', [now]);
     // 식별자는 해시해 저장하며, 제한 기록이 무한히 늘어나지 않도록 개수를 제한합니다.
-    if (!db.prepare('SELECT 1 FROM auth_attempts WHERE bucket = ?').get(bucket) &&
-        db.prepare('SELECT count(*) AS total FROM auth_attempts').get().total >= 20000) {
+    if (!(await db.query('SELECT 1 FROM auth_attempts WHERE bucket = ?', [bucket])).rows[0] &&
+        Number((await db.query('SELECT count(*) AS total FROM auth_attempts')).rows[0].total) >= 20000) {
       json(res, 503, { message: '요청이 많습니다. 잠시 후 다시 시도해 주세요.' });
       return false;
     }
-    const record = db.prepare(`INSERT INTO auth_attempts(bucket, count, expires_at) VALUES (?, 1, ?)
+    const record = (await db.query(`INSERT INTO auth_attempts(bucket, count, expires_at) VALUES (?, 1, ?)
       ON CONFLICT(bucket) DO UPDATE SET count = min(auth_attempts.count + 1, ?)
-      RETURNING count, expires_at`).get(bucket, now + WINDOW_MS, limit + 1);
+      RETURNING count, expires_at`, [bucket, now + WINDOW_MS, limit + 1])).rows[0];
     if (record.count <= limit) return true;
     res.setHeader('Retry-After', String(Math.ceil((record.expires_at - now) / 1000)));
     json(res, 429, { message: '요청이 너무 많습니다. 15분 후 다시 시도해 주세요.' });
@@ -124,7 +127,7 @@ export async function createApp({
     if (body.password.length < 15 || body.password.length > 128) return null;
     return { email, password: body.password };
   }
-  // JSON 요청만 허용하고 본문 크기를 제한합니다. 인증은 기본 8 KiB입니다.
+  // JSON 요청만 허용하고 본문 크기를 제한합니다.
   async function readJson(req, limit = 8192) {
     if (req.headers['content-type']?.split(';')[0].trim() !== 'application/json') {
       throw Object.assign(new Error('JSON 요청이 필요합니다.'), { status: 415 });
@@ -151,13 +154,12 @@ export async function createApp({
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
-    const url = new URL(req.url, 'http://localhost');
-    const path = url.pathname;
+    const path = new URL(req.url, 'http://localhost').pathname;
     // 첫 화면은 로그인 상태에 따라 이동시키고, 등록된 정적 파일만 제공합니다.
     if (!path.startsWith('/api/')) {
       if (!['GET', 'HEAD'].includes(req.method)) return json(res, 405, { message: '지원하지 않는 메서드입니다.' });
       if (path === '/') {
-        res.writeHead(302, { Location: currentUser(req) ? '/index.html' : '/login.html' });
+        res.writeHead(302, { Location: await currentUser(req) ? '/index.html' : '/login.html' });
         return res.end();
       }
       const file = staticFiles.get(path);
@@ -171,38 +173,21 @@ export async function createApp({
     if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method) && req.headers.origin !== origin) {
       return json(res, 403, { message: '허용되지 않은 요청 출처입니다.' });
     }
-    if (path === '/api/academic') {
-      const user = currentUser(req);
-      if (!user) return json(res, 401, { message: '로그인이 필요합니다.' });
-      // 이 헤더는 DB 선택자가 아닌 계정 변경 감지용입니다. 실제 DB 선택은 세션만 사용합니다.
-      if (req.headers['x-account-id'] !== String(user.id)) {
-        return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
-      }
-      if (url.search) return json(res, 400, { message: '사용자나 DB를 지정하는 요청은 지원하지 않습니다.' });
-      if (req.method === 'GET') return json(res, 200, academic.read(user.id));
-      if (req.method !== 'PUT') return json(res, 405, { message: '지원하지 않는 메서드입니다.' });
-      const state = validateAcademicState(await readJson(req, 256 * 1024));
-      // 본문을 받는 동안 로그아웃·만료된 세션도 거부합니다.
-      const authenticated = currentUser(req);
-      if (!authenticated) return json(res, 401, { message: '로그인이 필요합니다.' });
-      if (authenticated.id !== user.id) return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
-      return json(res, 200, academic.write(user.id, state));
-    }
     // 로그인 상태 확인: 비밀번호 정보를 제외한 현재 사용자 정보를 반환합니다.
     if (path === '/api/auth/me' && req.method === 'GET') {
-      const user = currentUser(req);
+      const user = await currentUser(req);
       return user ? json(res, 200, { user }) : json(res, 401, { message: '로그인이 필요합니다.' });
     }
     // 로그아웃: 서버 세션을 폐기하고 브라우저의 쿠키도 만료시킵니다.
     if (path === '/api/auth/logout' && req.method === 'POST') {
       await readJson(req);
-      revoke(req);
+      await revoke(req);
       cookie(res, '', 0);
       return json(res, 200, { message: '로그아웃되었습니다.' });
     }
     if (['/api/auth/signup', '/api/auth/login'].includes(path) && req.method === 'POST') {
       // 위조 가능한 전달 IP 헤더는 신뢰하지 않습니다. 배포 프록시에도 요청 제한이 필요합니다.
-      if (!allowAttempt(res, `ip:${digest(req.socket.remoteAddress || 'unknown')}`, authLimit)) return;
+      if (!await allowAttempt(res, `ip:${digest(req.socket.remoteAddress || 'unknown')}`, authLimit)) return;
       const body = await readJson(req);
       const input = credentials(body);
       if (!input) return json(res, 400, { message: '이메일과 비밀번호(15~128자)를 확인해 주세요.' });
@@ -212,23 +197,58 @@ export async function createApp({
         if (!name || name.length > 50) return json(res, 400, { message: '이름은 1~50자로 입력해 주세요.' });
         const hash = await passwordWork(res, () => hashPassword(input.password));
         if (hash === null) return;
-        const result = db.prepare(`INSERT INTO users(email, name, password_hash) VALUES (?, ?, ?)
-          ON CONFLICT(email) DO NOTHING`).run(input.email, name, hash);
+        const result = await db.query(`INSERT INTO users(email, name, password_hash) VALUES (?, ?, ?)
+          ON CONFLICT(email) DO NOTHING`, [input.email, name, hash]);
         if (!result.changes) return json(res, 409, { message: '이 이메일로 가입할 수 없습니다. 기존 계정이 있다면 로그인해 주세요.' });
         const user = { id: Number(result.lastInsertRowid), email: input.email, name };
-        startSession(req, res, user.id);
+        await startSession(req, res, user.id);
         return json(res, 201, { user });
       }
       // 로그인: 계정별 요청 제한과 비밀번호를 확인한 뒤 새 세션을 발급합니다.
       const accountBucket = `account:${digest(input.email)}`;
-      if (!allowAttempt(res, accountBucket, accountLimit)) return;
-      const row = db.prepare('SELECT * FROM users WHERE email = ?').get(input.email);
+      if (!await allowAttempt(res, accountBucket, accountLimit)) return;
+      const row = (await db.query('SELECT * FROM users WHERE email = ?', [input.email])).rows[0];
       const valid = await passwordWork(res, () => verifyPassword(input.password, row?.password_hash || dummyHash));
       if (valid === null) return;
       if (!row || !valid) return json(res, 401, { message: '이메일 또는 비밀번호가 올바르지 않습니다.' });
-      db.prepare('DELETE FROM auth_attempts WHERE bucket = ?').run(accountBucket);
-      startSession(req, res, row.id);
+      await db.query('DELETE FROM auth_attempts WHERE bucket = ?', [accountBucket]);
+      await startSession(req, res, row.id);
       return json(res, 200, { user: { id: row.id, email: row.email, name: row.name } });
+    }
+    // 최신 main(2)의 학사 API: 회원별 과목·학년·동시 저장 버전을 PostgreSQL에 저장합니다.
+    if (path === '/api/academic') {
+      const user = await currentUser(req);
+      if (!user) return json(res, 401, { message: '로그인이 필요합니다.' });
+      // 헤더는 DB 선택자가 아니라 로그인 계정 변경을 감지하는 안전장치입니다.
+      if (req.headers['x-account-id'] !== String(user.id)) {
+        return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
+      }
+      if (new URL(req.url, 'http://localhost').search) {
+        return json(res, 400, { message: '사용자나 DB를 지정하는 요청은 지원하지 않습니다.' });
+      }
+      if (req.method === 'GET') return json(res, 200, await academic.read(user.id));
+      if (req.method !== 'PUT') return json(res, 405, { message: '지원하지 않는 메서드입니다.' });
+      const state = validateAcademicState(await readJson(req, 256 * 1024));
+      const authenticated = await currentUser(req);
+      if (!authenticated) return json(res, 401, { message: '로그인이 필요합니다.' });
+      if (String(authenticated.id) !== String(user.id)) return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
+      return json(res, 200, await academic.write(user.id, state));
+    }
+    // 기존 external-base의 /api/courses API도 유지: 구버전 화면 및 저장된 과목과 호환합니다.
+    if (path === '/api/courses' && ['GET', 'PUT'].includes(req.method)) {
+      const user = await currentUser(req);
+      if (!user) return json(res, 401, { message: '로그인이 필요합니다.' });
+      if (req.method === 'GET') {
+        const row = (await db.query('SELECT courses_json FROM user_courses WHERE user_id = ?', [user.id])).rows[0];
+        return json(res, 200, { courses: row ? JSON.parse(row.courses_json) : null });
+      }
+      const body = await readJson(req, 256 * 1024);
+      const existing = await academic.read(user.id);
+      const validated = validateAcademicState({ courses: body?.courses, profile: existing.profile, revision: existing.revision });
+      const authenticated = await currentUser(req);
+      if (!authenticated) return json(res, 401, { message: '로그인이 필요합니다.' });
+      const saved = await academic.write(user.id, validated);
+      return json(res, 200, { courses: saved.courses });
     }
     return json(res, 404, { message: '존재하지 않는 API입니다.' });
   }
@@ -241,15 +261,30 @@ export async function createApp({
       json(res, status, { message: status === 500 ? '서버 오류가 발생했습니다.' : err.message });
     });
   });
-  app.on('close', () => academic.close());
   return { app, db, currentUser };
 }
 
 // 직접 실행할 때만 서버를 시작하고, 종료 신호를 받으면 연결과 DB를 정리합니다.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 3000);
-  const { app, db } = await createApp();
-  app.listen(port, process.env.HOST || '127.0.0.1', () => {
+  let service;
+  try { service = await createApp(); }
+  catch (error) {
+    // 실패 사유는 알려주되, 전체 DB 접속 주소나 암호는 로그에 노출하지 않습니다.
+    let reason = String(error?.message || error?.code || 'Unknown startup error');
+    if (process.env.DATABASE_URL) {
+      reason = reason.replaceAll(process.env.DATABASE_URL, '[DB URL redacted]');
+      try {
+        const password = decodeURIComponent(new URL(process.env.DATABASE_URL).password);
+        if (password) reason = reason.replaceAll(password, '[password redacted]');
+      } catch { /* DB URL이 잘못되었을 때에도 상세 문자열은 출력하지 않습니다. */ }
+    }
+    reason = reason.replace(/postgres(?:ql)?:\/\/\S+/gi, '[DB URL redacted]');
+    console.error('Server startup failed:', error?.code || error?.name || 'Error', reason);
+    process.exit(1);
+  }
+  const { app, db } = service;
+  app.listen(port, process.env.HOST || '0.0.0.0', () => {
     console.log(`ENDPoinT: ${process.env.APP_ORIGIN || `http://localhost:${port}`}/`);
   });
   app.on('error', err => { console.error(err.message); db.close(); process.exitCode = 1; });

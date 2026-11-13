@@ -22,8 +22,10 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
   expires_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS auth_attempts_expiry ON auth_attempts(expires_at);
--- 파일명은 서버가 발급합니다. 계정 ID가 재사용되어도 과거 DB를 재사용하지 않습니다.
-CREATE TABLE IF NOT EXISTS user_databases (
+CREATE TABLE IF NOT EXISTS user_courses (
   user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
-  storage_key TEXT NOT NULL UNIQUE CHECK(length(storage_key) = 64)
+  courses_json TEXT NOT NULL DEFAULT '[]',
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 최신 화면의 학년/버전(동시수정 보호) 저장용 필드. 오래된 SQLite는 db.js에서 마이그레이션합니다.

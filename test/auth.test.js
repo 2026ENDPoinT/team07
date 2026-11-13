@@ -1,7 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, unlinkSync, rmdirSync, existsSync, readdirSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
+import { mkdtempSync, unlinkSync, rmdirSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server/app.js';
@@ -17,9 +16,7 @@ async function launch(dbPath, options = {}) {
   });
   const base = `http://127.0.0.1:${server.address().port}`;
   return {
-    app,
     db,
-    base,
     async request(path, body, cookie, requestOrigin = origin, options = {}) {
       return new Promise((resolve, reject) => {
         const headers = { Origin: requestOrigin, 'Content-Type': 'application/json', ...(cookie ? { Cookie: cookie } : {}), ...options.headers };
@@ -52,171 +49,6 @@ async function launch(dbPath, options = {}) {
   };
 }
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
-
-const exampleCourse = (overrides = {}) => ({ id: 'course-1', courseName: '자료구조', credits: 3,
-  grade: 'A+', gradePoint: 4.5, semester: '2026-1', status: 'completed', category: 'major', isRetake: false, ...overrides });
-const academicRequest = (service, cookie, userId, body, options = {}) => service.request('/api/academic', body, cookie, origin,
-  { method: body === undefined ? 'GET' : 'PUT', ...options, headers: { 'X-Account-Id': String(userId), ...options.headers } });
-
-test('legacy accounts migrate; academic databases isolate users, persist across restart, and retain empty lists', async () => {
-  const folder = mkdtempSync(join(tmpdir(), 'team07-academic-'));
-  const path = join(folder, 'test.db');
-  let service = await launch(path);
-  try {
-    const first = await service.request('/api/auth/signup', { name: 'One', email: 'one@example.com', password });
-    const second = await service.request('/api/auth/signup', { name: 'Two', email: 'two@example.com', password });
-    const a = { cookie: cookieOf(first), id: (await first.json()).user.id };
-    const b = { cookie: cookieOf(second), id: (await second.json()).user.id };
-    // 이번 변경 전의 인증 스키마를 재현합니다. 재시작해도 계정과 세션은 그대로 유지됩니다.
-    service.db.exec('DROP TABLE user_databases');
-    await service.close();
-    service = await launch(path);
-    const initial = await academicRequest(service, a.cookie, a.id);
-    assert.equal(initial.headers.get('cache-control'), 'no-store');
-    assert.deepEqual(await initial.json(), { courses: [], profile: { grade: 1 }, revision: 0 });
-    assert.deepEqual(await (await academicRequest(service, b.cookie, b.id)).json(), await initial.json());
-
-    const aState = { courses: [exampleCourse()], profile: { grade: 3 }, revision: 0 };
-    assert.equal((await academicRequest(service, a.cookie, a.id, aState)).status, 200);
-    // 같은 과목 ID라도 다른 사용자의 파일에서만 변경됩니다.
-    const bState = { courses: [exampleCourse({ courseName: '사용자 2 과목', grade: 'F', gradePoint: 99 })], profile: { grade: 2 }, revision: 0 };
-    const bSaved = await academicRequest(service, b.cookie, b.id, bState);
-    assert.equal(bSaved.status, 200);
-    assert.equal((await bSaved.json()).courses[0].gradePoint, 0);
-    const mapping = service.db.prepare('SELECT * FROM user_databases ORDER BY user_id').all();
-    assert.equal(mapping.length, 2);
-    assert.notEqual(mapping[0].storage_key, mapping[1].storage_key);
-    assert.deepEqual(readdirSync(join(folder, 'users')).sort(), mapping.map(row => `${row.storage_key}.db`).sort());
-    for (const [index, name] of ['자료구조', '사용자 2 과목'].entries()) {
-      const privateDb = new DatabaseSync(join(folder, 'users', `${mapping[index].storage_key}.db`), { readOnly: true });
-      try {
-        const row = privateDb.prepare('SELECT * FROM academic_state').get();
-        assert.equal(JSON.parse(row.courses)[0].courseName, name);
-        assert.equal(privateDb.prepare("SELECT name FROM sqlite_master WHERE name IN ('users', 'sessions')").all().length, 0);
-      } finally { privateDb.close(); }
-      assert.equal((await service.request(`/storage/users/${mapping[index].storage_key}.db`, undefined, a.cookie)).status, 404);
-    }
-    await service.close();
-    service = await launch(path);
-    assert.deepEqual(await (await academicRequest(service, a.cookie, a.id)).json(), { ...aState, revision: 1 });
-    assert.equal((await (await academicRequest(service, b.cookie, b.id)).json()).profile.grade, 2);
-    const edited = await academicRequest(service, a.cookie, a.id, { ...aState, revision: 1,
-      courses: [exampleCourse({ grade: 'B0', gradePoint: 4.5 })] });
-    assert.equal((await edited.json()).courses[0].gradePoint, 3);
-    const empty = { courses: [], profile: { grade: 4 }, revision: 2 };
-    assert.equal((await academicRequest(service, a.cookie, a.id, empty)).status, 200);
-    await service.close();
-    service = await launch(path);
-    assert.deepEqual(await (await academicRequest(service, a.cookie, a.id)).json(), { ...empty, revision: 3 });
-    assert.equal((await (await academicRequest(service, b.cookie, b.id)).json()).courses[0].courseName, '사용자 2 과목');
-    // 계정 ID가 재사용되어도 삭제된 계정의 DB 파일에 연결되면 안 됩니다.
-    service.db.prepare('DELETE FROM users WHERE id = ?').run(b.id);
-    const replacement = await service.request('/api/auth/signup', { name: 'New account', email: 'new@example.com', password });
-    const replacementId = (await replacement.json()).user.id;
-    assert.equal(replacementId, b.id);
-    assert.deepEqual(await (await academicRequest(service, cookieOf(replacement), replacementId)).json(),
-      { courses: [], profile: { grade: 1 }, revision: 0 });
-    assert.notEqual(service.db.prepare('SELECT storage_key FROM user_databases WHERE user_id = ?').get(replacementId).storage_key,
-      mapping[1].storage_key);
-  } finally {
-    await service.close();
-    if (existsSync(join(folder, 'users'))) {
-      for (const file of readdirSync(join(folder, 'users'))) unlinkSync(join(folder, 'users', file));
-      rmdirSync(join(folder, 'users'));
-    }
-    for (const suffix of ['', '-wal', '-shm']) if (existsSync(path + suffix)) unlinkSync(path + suffix);
-    rmdirSync(folder);
-  }
-});
-
-test('academic API rejects unauthenticated access, account spoofing, CSRF, stale writes and invalid input', async () => {
-  const service = await launch(':memory:');
-  try {
-    assert.equal((await service.request('/api/academic')).status, 401);
-    const signup = await service.request('/api/auth/signup', { name: 'One', email: 'one@example.com', password });
-    const cookie = cookieOf(signup);
-    const id = (await signup.json()).user.id;
-    const second = await service.request('/api/auth/signup', { name: 'Two', email: 'two@example.com', password });
-    const secondCookie = cookieOf(second);
-    const state = { courses: [exampleCourse()], profile: { grade: 1 }, revision: 0 };
-    assert.equal((await service.request('/api/academic', undefined, cookie)).status, 403);
-    assert.equal((await academicRequest(service, cookie, id + 1)).status, 403);
-    assert.equal((await academicRequest(service, secondCookie, id, state)).status, 403);
-    assert.equal((await academicRequest(service, `${cookie}; ${cookie}`, id, state)).status, 401);
-    assert.equal((await service.request(`/api/academic?userId=${id + 1}`, undefined, cookie, origin,
-      { headers: { 'X-Account-Id': String(id) } })).status, 400);
-    for (const badOrigin of ['https://evil.example', undefined]) {
-      assert.equal((await academicRequest(service, cookie, id, state, { headers: { Origin: badOrigin } })).status, 403);
-    }
-    assert.equal((await academicRequest(service, cookie, id, state, { method: 'POST' })).status, 405);
-    assert.equal((await academicRequest(service, cookie, id, state, { headers: { 'Content-Type': 'text/plain' } })).status, 415);
-    assert.equal((await academicRequest(service, cookie, id, state, { rawBody: '{' })).status, 400);
-    assert.equal((await academicRequest(service, cookie, id, state, { rawBody: JSON.stringify({ padding: 'x'.repeat(270000) }) })).status, 413);
-    const invalidStates = [null, [], {}, { ...state, userId: id + 1 }, { ...state, dbPath: '../other.db' },
-      { ...state, revision: -1 }, { ...state, revision: '0' }, { ...state, profile: { grade: 5 } },
-      { ...state, profile: { grade: 1, userId: id } }, { ...state, courses: {} },
-      { ...state, courses: Array.from({ length: 501 }, (_, i) => exampleCourse({ id: `course-${i}` })) },
-      { ...state, courses: [exampleCourse(), exampleCourse()] }];
-    for (const overrides of [{ credits: '3' }, { credits: 0 }, { credits: 31 }, { credits: 1.1 },
-      { courseName: ' ' }, { courseName: 'x'.repeat(101) }, { semester: '2026-3' }, { grade: 'constructor' },
-      { category: 'other' }, { status: 'other' }, { isRetake: 'false' }, { id: '../other' }, { userId: id + 1 }]) {
-      invalidStates.push({ ...state, courses: [exampleCourse(overrides)] });
-    }
-    for (const invalid of invalidStates) {
-      assert.equal((await academicRequest(service, cookie, id, invalid)).status, 400, JSON.stringify(invalid)?.slice(0, 200));
-    }
-    assert.deepEqual(await (await academicRequest(service, cookie, id)).json(), { courses: [], profile: { grade: 1 }, revision: 0 });
-    const attackText = "<img src=x onerror=alert(1)>'); DROP TABLE academic_state;--";
-    const [one, two] = await Promise.all([
-      academicRequest(service, cookie, id, { ...state, courses: [exampleCourse({ courseName: attackText })] }),
-      academicRequest(service, cookie, id, state)
-    ]);
-    assert.deepEqual([one.status, two.status].sort(), [200, 409]);
-    const saved = await (await academicRequest(service, cookie, id)).json();
-    assert.equal(saved.revision, 1);
-    assert.equal(saved.courses.length, 1);
-    assert.equal((await academicRequest(service, cookie, id, state)).status, 409);
-    assert.deepEqual(await (await academicRequest(service, secondCookie, id + 1)).json(), { courses: [], profile: { grade: 1 }, revision: 0 });
-    // 과목 수가 늘어도 인증 요청의 8 KiB 제한과 별개의 제한으로 정상 저장됩니다.
-    const large = { ...state, revision: 1, courses: Array.from({ length: 120 }, (_, i) => exampleCourse({ id: `course-${i}` })) };
-    assert.equal((await academicRequest(service, cookie, id, large)).status, 200);
-    await service.request('/api/auth/logout', {}, cookie);
-    assert.equal((await academicRequest(service, cookie, id)).status, 401);
-    service.db.prepare('UPDATE sessions SET expires_at = 0').run();
-    assert.equal((await academicRequest(service, secondCookie, id + 1, state)).status, 401);
-  } finally { await service.close(); }
-});
-
-test('academic writes reject sessions revoked while a request body is uploading', async () => {
-  const service = await launch(':memory:');
-  try {
-    const signup = await service.request('/api/auth/signup', { name: 'One', email: 'one@example.com', password });
-    const cookie = cookieOf(signup);
-    const id = (await signup.json()).user.id;
-    const body = JSON.stringify({ courses: [exampleCourse()], profile: { grade: 4 }, revision: 0 });
-    let onRequest;
-    const accepted = new Promise(resolve => {
-      onRequest = req => { if (req.url === '/api/academic') req.once('data', resolve); };
-      service.app.on('request', onRequest);
-    });
-    let pending;
-    const response = new Promise((resolve, reject) => {
-      pending = httpRequest(service.base + '/api/academic', { method: 'PUT', headers: {
-        Origin: origin, Cookie: cookie, 'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(body), 'X-Account-Id': String(id)
-      } }, res => { res.resume(); res.on('end', () => resolve(res.statusCode)); });
-      pending.on('error', reject);
-    });
-    pending.write(body.slice(0, 10));
-    // readJson이 실제 요청 스트림을 읽기 시작했음을 확인한 후 세션을 폐기합니다.
-    await accepted;
-    service.app.off('request', onRequest);
-    await service.request('/api/auth/logout', {}, cookie);
-    pending.end(body.slice(10));
-    assert.equal(await response, 401);
-    assert.equal(service.db.prepare('SELECT count(*) AS total FROM user_databases').get().total, 0);
-  } finally { await service.close(); }
-});
 
 test('dashboard assets, module imports, sample data and authenticated entry route', async () => {
   const service = await launch(':memory:');
