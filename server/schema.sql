@@ -22,3 +22,8 @@ CREATE TABLE IF NOT EXISTS auth_attempts (
   expires_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS auth_attempts_expiry ON auth_attempts(expires_at);
+-- 파일명은 서버가 발급합니다. 계정 ID가 재사용되어도 과거 DB를 재사용하지 않습니다.
+CREATE TABLE IF NOT EXISTS user_databases (
+  user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  storage_key TEXT NOT NULL UNIQUE CHECK(length(storage_key) = 64)
+);

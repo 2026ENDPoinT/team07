@@ -30,8 +30,6 @@ export const STATUSES = ["completed", "in_progress"];
 // 화면에 보여줄 한글 이름
 export const CATEGORY_LABELS = { major: "전공", minor: "부전공", general: "교양" };
 
-const STORAGE_KEY = "team07.courses";
-
 // ---------- 입력 ----------
 
 // 입력값을 검사하고 과목 객체 하나를 만듦. 잘못된 값이면 Error를 던짐.
@@ -157,30 +155,4 @@ export function summarize(courses) {
     inProgressCredits,
     gpa: Math.round(gpa * 100) / 100,
   };
-}
-
-// ---------- 저장 / 불러오기 ----------
-// 브라우저의 localStorage에 저장. (새로고침해도 남아 있음.)
-
-let memoryStore = "[]"; // localStorage가 없는 환경(테스트 등)에서 쓰는 임시 저장소
-
-// 과목 배열을 JSON으로 저장하고 저장 실패는 호출한 화면에 알립니다.
-export function saveCourses(courses) {
-  const text = JSON.stringify(courses);
-  try {
-    if (typeof localStorage === "undefined") memoryStore = text;
-    else localStorage.setItem(STORAGE_KEY, text);
-  } catch (cause) {
-    throw new Error("과목을 저장하지 못했습니다. 브라우저의 저장 공간과 권한을 확인해 주세요.", { cause });
-  }
-}
-
-// 저장된 과목을 읽고, 데이터가 없거나 읽기에 실패하면 기본값을 반환합니다.
-export function loadCourses({ fallback = [] } = {}) {
-  try {
-    const text = typeof localStorage === "undefined" ? memoryStore : localStorage.getItem(STORAGE_KEY);
-    return text ? JSON.parse(text) : fallback;
-  } catch {
-    return fallback;
-  }
 }

@@ -1,5 +1,5 @@
 import { authRequest } from "/js/auth/api.js";
-import { loadCourses } from "/js/grades/grades.js";
+import { createAcademicClient } from "/js/academic-api.js";
 import { calculateCumulativeGPA, calculateSemesterGPA } from "/js/grades/gpa.js";
 import { calculateSemesterGpa, mountGradeDashboard } from "/js/graph/index.js";
 
@@ -53,13 +53,11 @@ async function initAnalysis() {
         const { user } = await authRequest("me");
         userName.textContent = `${user.name}님`;
 
-        // 학업 대시보드와 같은 저장소를 사용하며, 빈 목록도 그대로 유지합니다.
-        const storedCourses = loadCourses({ fallback: null });
-        const usingExamples = storedCourses === null;
-        const [courses, gradingPolicy] = await Promise.all([
-            usingExamples ? loadData("courses").then(data => data.courses) : storedCourses,
+        const [state, gradingPolicy] = await Promise.all([
+            createAcademicClient(user.id).load(),
             loadData("grading_policy")
         ]);
+        const courses = state.courses;
         if (!Array.isArray(courses)) throw new Error("과목 데이터 형식이 올바르지 않습니다.");
 
         const semesters = calculateSemesterGpa(courses);
@@ -69,8 +67,7 @@ async function initAnalysis() {
         setupSemesterGpa(courses, latest?.semester);
         document.querySelector("#semester-count").textContent = String(semesters.length);
         document.querySelector("#data-source").textContent =
-            `${usingExamples ? "예시 과목 데이터" : "이 브라우저에 저장된 과목 데이터"} · ` +
-            "과목 변경은 학업 대시보드에서 할 수 있습니다. 과목은 로그인 계정별로 저장되거나 서버와 동기화되지 않습니다.";
+            "내 계정에 저장된 과목 · 과목 변경은 학업 대시보드에서 할 수 있습니다. 평가 기준은 예시입니다.";
         mountGradeDashboard(container, { courses, gradingPolicy });
     } catch (error) {
         if (error.status === 401) {

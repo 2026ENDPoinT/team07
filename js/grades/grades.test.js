@@ -7,18 +7,7 @@ import {
   removeCourse,
   getCourses,
   summarize,
-  saveCourses,
-  loadCourses,
 } from "./grades.js";
-
-function mockStorage(t, storage) {
-  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
-  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: storage });
-  t.after(() => {
-    if (descriptor) Object.defineProperty(globalThis, "localStorage", descriptor);
-    else delete globalThis.localStorage;
-  });
-}
 
 // 테스트용 과목 목록: 교양 1개(완료), 전공 2개(완료), 전공 1개(수강 중)
 function sample() {
@@ -145,38 +134,4 @@ test("수강 상태를 바꾸면 성적·평점을 지우거나 새 성적으로
   assert.equal(completed[0].gradePoint, 4);
   const custom = [{ ...list[0], gradePoint: 3.7 }];
   assert.equal(updateCourse(custom, custom[0].id, { courseName: "새 이름" })[0].gradePoint, 3.7);
-});
-
-test("저장된 과목이 없는 경우와 전체 삭제 후 빈 목록을 구분한다", t => {
-  const storage = new Map();
-  mockStorage(t, {
-    getItem: key => storage.get(key) ?? null,
-    setItem: (key, value) => storage.set(key, value)
-  });
-  assert.equal(loadCourses({ fallback: null }), null);
-  const list = sample();
-  saveCourses(list);
-  const updated = updateCourse(loadCourses(), list[0].id, { grade: "F" });
-  saveCourses(updated);
-  assert.equal(loadCourses()[0].gradePoint, 0);
-  let remaining = loadCourses();
-  for (const course of list) remaining = removeCourse(remaining, course.id);
-  saveCourses(remaining);
-  assert.deepEqual(loadCourses({ fallback: null }), []);
-});
-
-test("브라우저 저장 실패를 호출자에게 전달하고 기존 데이터는 유지한다", t => {
-  const stored = JSON.stringify(sample());
-  mockStorage(t, {
-    getItem: () => stored,
-    setItem: () => { throw new Error("QuotaExceededError"); }
-  });
-  assert.throws(() => saveCourses([]), /저장하지 못했습니다/);
-  assert.deepEqual(loadCourses(), JSON.parse(stored));
-});
-
-test("저장하고 다시 불러온다", () => {
-  const list = sample();
-  saveCourses(list);
-  assert.deepEqual(loadCourses(), list);
 });
