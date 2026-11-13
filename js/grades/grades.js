@@ -9,7 +9,7 @@
 //     gradePoint: 4.5,               // 평점 (Number, float). 수강 중이면 null
 //     semester:   "2026-1",          // 학기 (String)
 //     status:     "completed",       // 수강 상태 (String): "completed" | "in_progress"
-//     category:   "general",         // 이수 구분 (String): "major" | "minor" | "general"
+//     category:   "general",         // 이수 구분 (String): "major" | "double_major" | "minor" | "general"
 //     isRetake:   false              // 재수강 여부 (Boolean)
 //   }
 //
@@ -24,12 +24,12 @@ export const GRADE_POINTS = {
   "F": 0,
 };
 
-export const CATEGORIES = ["major", "minor", "general"];
+export const CATEGORIES = ["major", "double_major", "minor", "general"];
 export const STATUSES = ["completed", "in_progress"];
 const SEMESTER_PATTERN = /^\d{4}-(1|2|여름|겨울)$/;
 
 // 화면에 보여줄 한글 이름
-export const CATEGORY_LABELS = { major: "전공", minor: "부전공", general: "교양" };
+export const CATEGORY_LABELS = { major: "전공", double_major: "복수전공", minor: "부전공", general: "교양" };
 
 // ---------- 입력 ----------
 
@@ -202,7 +202,7 @@ export function removeCourse(courses, id) {
 // ---------- 조회 ----------
 
 // 조건에 맞는 과목만 골라서 돌려주기. 조건은 전부 생략할 수 있음.
-//   category: "all" | "major" | "minor" | "general"   (기본값 "all" = 전체)
+//   category: "all" | "major" | "double_major" | "minor" | "general"   (기본값 "all" = 전체)
 //   semester: "2026-1" 처럼 지정하면 그 학기만
 //   keyword : 과목명에 이 글자가 들어간 과목만
 //   status  : "in_progress"면 수강 중인 과목만, "completed"면 수강 완료 과목만

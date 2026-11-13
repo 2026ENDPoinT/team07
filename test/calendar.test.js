@@ -7,7 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { request as httpRequest } from 'node:http';
 import { launch } from './http-helper.js';
 import { validateCalendarState } from '../server/calendar.js';
-import { MIN_CALENDAR_YEAR, MAX_CALENDAR_YEAR, calendarMonth, dateKey, monthCells, moveMonth, sortedEvents, eventRange, eventOccursOn, eventOverlapsMonth, eventPeriod } from '../public/js/calendar-model.js';
+import { MIN_CALENDAR_YEAR, MAX_CALENDAR_YEAR, calendarMonth, dateKey, monthCells, moveMonth, sortedEvents, eventRange, eventOccursOn, eventOverlapsMonth, eventPeriod, ddayLabel, todaysDdayEvents } from '../public/js/calendar-model.js';
 
 const origin = 'http://localhost:3000';
 const password = 'calendar-test-password-2026';
@@ -51,7 +51,7 @@ test('calendar uses each existing personal DB, preserves academic data, and pers
     await service.close();
     service = await launch(path);
     assert.deepEqual(await (await calendar(service, a)).json(), saved);
-    const edited = { ...event, date: '2027-01-01', time: '', endDate: '2027-01-03', endTime: '', title: '새해 계획' };
+    const edited = { ...event, date: '2027-01-01', time: '', endDate: '2027-01-03', endTime: '', title: '새해 계획', isDday: true };
     saved = await (await calendar(service, a, { events: [edited], revision: 1 })).json();
     assert.equal(saved.revision, 2);
     assert.deepEqual(saved.events, [edited]);
@@ -90,7 +90,8 @@ test('calendar rejects unauthenticated, wrong-account, cross-origin, malformed a
     assert.equal((await calendar(service, a, initial, { headers: { 'Content-Type': 'text/plain' } })).status, 415);
     assert.equal((await calendar(service, a, initial, { rawBody: '{' })).status, 400);
     assert.equal((await calendar(service, a, { ...initial, userId: b.id })).status, 400);
-    for (const invalid of [{ date: '2026-02-30' }, { time: '24:00' }, { title: ' ' }, { notes: 'x'.repeat(2001) }, { id: '../other' }]) {
+    for (const invalid of [{ date: '2026-02-30' }, { time: '24:00' }, { title: ' ' }, { notes: 'x'.repeat(2001) }, { id: '../other' },
+      ...['true', 1, null, {}, []].map(isDday => ({ isDday }))]) {
       assert.equal((await calendar(service, a, { events: [{ ...event, ...invalid }], revision: 0 })).status, 400);
     }
     for (const range of [
@@ -110,6 +111,41 @@ test('calendar rejects unauthenticated, wrong-account, cross-origin, malformed a
       assert.equal((await service.request(path)).status, 200);
     }
   } finally { await service.close(); }
+});
+
+test('D-day settings retain legacy schedules and can be enabled or disabled', () => {
+  for (const item of [event, { ...event, isDday: true }, { ...event, isDday: false }]) {
+    assert.deepEqual(validateCalendarState({ events: [item], revision: 0 }).events, [item]);
+  }
+});
+
+test('D-day counts calendar days across leap days, DST, year boundaries and supported years', () => {
+  const deadline = { ...event, isDday: true };
+  assert.equal(ddayLabel(event, event.date), '');
+  assert.equal(ddayLabel({ ...deadline, isDday: false }, event.date), '');
+  for (const [date, today, label] of [
+    ['2026-11-18', '2026-11-14', 'D-4'],
+    ['2026-11-18', '2026-11-18', 'D-Day'],
+    ['2026-11-18', '2026-11-19', 'D+1'],
+    ['2028-03-01', '2028-02-28', 'D-2'],
+    ['2026-03-09', '2026-03-08', 'D-1'],
+    ['2027-01-01', '2026-12-31', 'D-1'],
+    ['0099-01-01', '0098-12-31', 'D-1'],
+    ['9999-12-31', '0001-01-01', 'D-3652058']
+  ]) assert.equal(ddayLabel({ ...deadline, date }, today), label);
+});
+
+test('today notifications include all enabled start dates only, ordered by time', () => {
+  const today = '2026-11-18';
+  const deadline = { ...event, isDday: true };
+  const allDay = { ...deadline, id: 'all-day', time: '' };
+  const events = [deadline, event, { ...deadline, id: 'disabled', isDday: false },
+    { ...deadline, id: 'tomorrow', date: '2026-11-19' },
+    { ...deadline, id: 'ongoing', date: '2026-11-17', endDate: '2026-11-20', endTime: '10:00' }, allDay];
+  assert.deepEqual(todaysDdayEvents(events, today), [allDay, deadline]);
+  assert.deepEqual(todaysDdayEvents(events, '2026-11-20'), []);
+  assert.deepEqual(todaysDdayEvents([], today), []);
+  assert.deepEqual(events[0], deadline);
 });
 
 test('event ranges include each day and month, keep legacy events, and distinguish all-day and timed periods', () => {

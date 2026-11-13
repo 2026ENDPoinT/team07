@@ -9,6 +9,7 @@ import { createApp } from '../server/app.js';
 import { openDatabase } from '../server/db.js';
 import { postgresConfig, createPostgresDatabase } from '../server/postgres.js';
 import { launch } from './http-helper.js';
+import { verifyProfileFlow } from './profile-helper.js';
 
 const origin = 'http://localhost:3000';
 const password = 'test-only-password-2026';
@@ -48,6 +49,28 @@ async function fixture() {
   }
   return { engine, connect, close: () => engine.close() };
 }
+
+test('PostgreSQL profile migration and updates preserve accounts and password confirmation rules', async () => {
+  const pg = await fixture();
+  let service;
+  try {
+    const setup = await pg.connect();
+    await setup.query('ALTER TABLE app_private.users DROP COLUMN department');
+    await setup.query('ALTER TABLE app_private.users DROP COLUMN double_major');
+    await setup.query('ALTER TABLE app_private.users DROP COLUMN minor');
+    await setup.close();
+    service = await launch(':memory:', { database: await pg.connect() });
+    const expected = await verifyProfileFlow(service);
+    await service.close();
+    service = await launch(':memory:', { database: await pg.connect() });
+    const login = await service.request('/api/auth/login', { email: expected.email, password: 'updated-test-password-2026' });
+    assert.equal(login.status, 200);
+    assert.deepEqual((await login.json()).user, expected);
+  } finally {
+    if (service) await service.close();
+    await pg.close();
+  }
+});
 
 test('PostgreSQL config enforces certificate verification and rejects remote TLS downgrade', async () => {
   const config = postgresConfig({ databaseUrl: 'postgresql://app:p%40ss%3Aword@db.example.com:6543/postgres?sslmode=require&options=unsafe', production: true });
@@ -222,7 +245,7 @@ test('PostgreSQL calendar persists per account with independent revisions and pr
     const b = await signup('calendar-b');
     const request = (account, state) => service.request('/api/calendar', state, account.cookie, origin,
       { method: state === undefined ? 'GET' : 'PUT', headers: { 'X-Account-Id': String(account.id) } });
-    const item = { id: 'deadline', title: '과제 마감', date: '2026-12-01', time: '', notes: '제출하기' };
+    const item = { id: 'deadline', title: '과제 마감', date: '2026-12-01', time: '', notes: '제출하기', isDday: true };
     const initial = { events: [], revision: 0 };
     assert.deepEqual(await (await request(a)).json(), initial);
     assert.deepEqual(await (await request(a, { events: [item], revision: 0 })).json(), { events: [item], revision: 1 });
@@ -233,7 +256,7 @@ test('PostgreSQL calendar persists per account with independent revisions and pr
     await service.close();
     service = await launch(':memory:', { database: await pg.connect() });
     assert.deepEqual(await (await request(a)).json(), { events: [item], revision: 1 });
-    const edited = { ...item, title: '과제 제출', time: '18:00', endDate: '2026-12-03', endTime: '09:00' };
+    const edited = { ...item, title: '과제 제출', time: '18:00', endDate: '2026-12-03', endTime: '09:00', isDday: false };
     assert.deepEqual(await (await request(a, { events: [edited], revision: 1 })).json(), { events: [edited], revision: 2 });
     await service.close();
     service = await launch(':memory:', { database: await pg.connect() });

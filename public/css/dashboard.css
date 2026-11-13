@@ -70,7 +70,13 @@ button {
     align-items: center;
     gap: 18px;
     font-size: 14px;
+    min-width: 0;
+    flex-wrap: wrap;
 }
+
+#user-name { overflow-wrap: anywhere; }
+.logout-button { flex-shrink: 0; }
+a.logout-button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
 
 .logout-button {
     padding: 8px 13px;
@@ -93,6 +99,16 @@ button {
 .welcome-section {
     margin-bottom: 38px;
 }
+
+.dday-notification { margin-bottom: 28px; padding: 22px; border: 1px solid #e6c591; border-radius: 13px; background: #fff7e9; }
+.dday-notification[hidden], #dday-message:empty { display: none; }
+.dday-notification .section-heading { gap: 12px; align-items: flex-start; }
+.dday-notification h2 { color: #8a4b08; }
+.dday-notification ul { margin: 12px 0 18px; padding-left: 20px; }
+.dday-notification li { margin-top: 10px; overflow-wrap: anywhere; }
+.dday-notification li span { display: block; margin-top: 4px; color: var(--text-secondary); font-size: 13px; }
+.dday-notification a { color: var(--primary); font-size: 13px; font-weight: 700; }
+.dday-notification a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 
 .eyebrow {
     margin: 0 0 10px;
@@ -176,6 +192,8 @@ section h2 {
 .graduation-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
 @media (max-width: 600px) {
+    .topbar { height: auto; min-height: 72px; padding: 16px 5%; flex-wrap: wrap; gap: 16px; }
+    .user-area { gap: 10px; }
     .graduation-summary { grid-template-columns: 1fr; }
 }
 

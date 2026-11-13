@@ -17,6 +17,9 @@ const digest = token => createHash('sha256').update(token).digest('hex');
 const staticFiles = new Map([
   ['/login.html', ['public/login.html', 'text/html; charset=utf-8']],
   ['/index.html', ['public/index.html', 'text/html; charset=utf-8']],
+  ['/mypage.html', ['public/mypage.html', 'text/html; charset=utf-8']],
+  ['/css/mypage.css', ['public/css/mypage.css', 'text/css; charset=utf-8']],
+  ['/js/mypage.js', ['public/mypage.js', 'text/javascript; charset=utf-8']],
   ['/grade-analysis.html', ['public/grade-analysis.html', 'text/html; charset=utf-8']],
   ['/calendar.html', ['public/calendar.html', 'text/html; charset=utf-8']],
   ['/css/calendar.css', ['public/css/calendar.css', 'text/css; charset=utf-8']],
@@ -111,7 +114,8 @@ export async function createApp({
   // 만료되지 않은 세션의 사용자를 조회합니다. 개인 데이터 접근 시 이 사용자의 ID를 사용합니다.
   async function currentUser(req) {
     const token = tokenFrom(req);
-    return token ? (await db.query(`SELECT u.id, u.email, u.name FROM ${sessionsTable} s
+    return token ? (await db.query(`SELECT u.id, u.email, u.name, u.department,
+      u.double_major AS "doubleMajor", u.minor FROM ${sessionsTable} s
       JOIN ${usersTable} u ON u.id = s.user_id WHERE s.token_hash = $1 AND s.expires_at > $2`, [digest(token), Date.now()])).rows[0] : undefined;
   }
   // IP 또는 계정별 요청 횟수를 DB에 기록하고 15분 동안의 허용 횟수를 검사합니다.
@@ -239,6 +243,70 @@ export async function createApp({
       const user = await currentUser(req);
       return user ? json(res, 200, { user }) : json(res, 401, { message: '로그인이 필요합니다.' });
     }
+    // 계정 선택은 세션으로만 수행하며, 화면을 연 뒤 계정이 바뀐 경우 수정을 거부합니다.
+    if (path === '/api/auth/profile' && req.method === 'POST') {
+      const user = await currentUser(req);
+      if (!user) return json(res, 401, { message: '로그인이 필요합니다.' });
+      if (req.headers['x-account-id'] !== String(user.id)) {
+        return json(res, 403, { message: '로그인 계정이 변경되었습니다. 새로고침해 주세요.' });
+      }
+      if (url.search) return json(res, 400, { message: '사용자를 지정하는 요청은 지원하지 않습니다.' });
+      const body = await readJson(req);
+      const fields = ['name', 'email', 'department', 'doubleMajor', 'minor', 'password', 'passwordConfirm'];
+      if (!body || Array.isArray(body) || typeof body !== 'object' ||
+          Object.keys(body).some(key => !fields.includes(key)) ||
+          !['name', 'email', 'department'].every(key => typeof body[key] === 'string')) {
+        return json(res, 400, { message: '회원정보 입력 형식을 확인해 주세요.' });
+      }
+      const name = body.name.trim();
+      const email = body.email.trim().toLowerCase();
+      const department = body.department.trim();
+      if (!name || name.length > 50) return json(res, 400, { message: '이름은 1~50자로 입력해 주세요.' });
+      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return json(res, 400, { message: '아이디는 올바른 이메일 주소로 입력해 주세요.' });
+      }
+      if (department.length > 100) return json(res, 400, { message: '학과는 100자 이내로 입력해 주세요.' });
+      // 빈 문자열은 미선택, 생략은 기존 선택 유지입니다. 전공명으로 선택 여부를 함께 저장합니다.
+      const majors = {};
+      for (const [key, label] of [['doubleMajor', '복수전공'], ['minor', '부전공']]) {
+        if (body[key] !== undefined && (typeof body[key] !== 'string' || body[key].trim().length > 100)) {
+          return json(res, 400, { message: `${label} 전공명은 100자 이내의 문자열로 입력해 주세요.` });
+        }
+        majors[key] = body[key] === undefined ? null : body[key].trim();
+      }
+      const password = body.password === undefined ? '' : body.password;
+      const passwordConfirm = body.passwordConfirm === undefined ? '' : body.passwordConfirm;
+      if (typeof password !== 'string' || typeof passwordConfirm !== 'string') {
+        return json(res, 400, { message: '비밀번호 입력 형식을 확인해 주세요.' });
+      }
+      if (password !== passwordConfirm) return json(res, 400, { message: '비밀번호 확인이 일치하지 않습니다.' });
+      if (password && (password.length < 15 || password.length > 128)) {
+        return json(res, 400, { message: '비밀번호는 15~128자로 입력해 주세요.' });
+      }
+      let hash = null;
+      if (password) {
+        if (!await allowAttempt(res, `profile:${digest(String(user.id))}`, accountLimit)) return;
+        hash = await passwordWork(res, () => hashPassword(password));
+        if (hash === null) return;
+      }
+      // 본문 수신·해시 작업 중 폐기되거나 만료된 세션으로는 저장할 수 없습니다.
+      let saved;
+      try {
+        saved = (await db.query(`UPDATE ${usersTable}
+          SET name = $1, email = $2, department = $3, password_hash = COALESCE($4, password_hash),
+            double_major = COALESCE($8, double_major), minor = COALESCE($9, minor)
+          WHERE id = $5 AND EXISTS (SELECT 1 FROM ${sessionsTable}
+            WHERE token_hash = $6 AND user_id = $5 AND expires_at > $7)
+          RETURNING id, email, name, department, double_major AS "doubleMajor", minor`,
+        [name, email, department, hash, user.id, digest(tokenFrom(req)), Date.now(), majors.doubleMajor, majors.minor])).rows[0];
+      } catch (error) {
+        if (error.code === '23505' || error.errcode === 2067) {
+          return json(res, 409, { message: '이미 사용 중인 아이디(이메일)입니다.' });
+        }
+        throw error;
+      }
+      return saved ? json(res, 200, { user: saved }) : json(res, 401, { message: '로그인이 필요합니다.' });
+    }
     // 로그아웃: 서버 세션을 폐기하고 브라우저의 쿠키도 만료시킵니다.
     if (path === '/api/auth/logout' && req.method === 'POST') {
       await readJson(req);
@@ -261,7 +329,7 @@ export async function createApp({
         const result = await db.query(`INSERT INTO ${usersTable}(email, name, password_hash) VALUES ($1, $2, $3)
           ON CONFLICT(email) DO NOTHING RETURNING id`, [input.email, name, hash]);
         if (!result.rows.length) return json(res, 409, { message: '이 이메일로 가입할 수 없습니다. 기존 계정이 있다면 로그인해 주세요.' });
-        const user = { id: result.rows[0].id, email: input.email, name };
+        const user = { id: result.rows[0].id, email: input.email, name, department: '', doubleMajor: '', minor: '' };
         await startSession(req, res, user.id);
         return json(res, 201, { user });
       }
@@ -274,7 +342,8 @@ export async function createApp({
       if (!row || !valid) return json(res, 401, { message: '이메일 또는 비밀번호가 올바르지 않습니다.' });
       await db.query(`DELETE FROM ${attemptsTable} WHERE bucket = $1`, [accountBucket]);
       await startSession(req, res, row.id);
-      return json(res, 200, { user: { id: row.id, email: row.email, name: row.name } });
+      return json(res, 200, { user: { id: row.id, email: row.email, name: row.name, department: row.department,
+        doubleMajor: row.double_major, minor: row.minor } });
     }
     return json(res, 404, { message: '존재하지 않는 API입니다.' });
   }

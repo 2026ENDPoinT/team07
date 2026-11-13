@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENDPoinT | 마이페이지</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/mypage.css">
+    <script type="module" src="/js/mypage.js"></script>
+</head>
+<body class="mypage">
+    <header class="topbar">
+        <a class="logo" href="/index.html"><span class="logo-icon">E</span><span>ENDPoinT</span></a>
+        <div class="user-area">
+            <span id="user-name">사용자</span>
+            <a class="logout-button" href="/mypage.html" aria-current="page">마이페이지</a>
+            <button id="logout-button" class="logout-button" type="button" disabled>로그아웃</button>
+        </div>
+    </header>
+    <main class="main-content">
+        <nav class="analysis-navigation" aria-label="대시보드 이동">
+            <a class="secondary-button" href="/index.html">← 학업 대시보드로 돌아가기</a>
+        </nav>
+        <section class="welcome-section">
+            <p class="eyebrow">MY ACCOUNT</p>
+            <h1>마이페이지</h1>
+            <p class="subtitle">내 회원정보를 확인하고 변경하세요.</p>
+        </section>
+        <form id="profile-form" class="profile-card" aria-busy="true">
+            <fieldset id="profile-fields" disabled>
+                <legend>회원정보 수정</legend>
+                <div class="profile-grid">
+                    <div class="profile-field">
+                        <label for="name">이름</label>
+                        <input id="name" name="name" autocomplete="name" maxlength="50" required>
+                    </div>
+                    <div class="profile-field">
+                        <label for="email">아이디(이메일)</label>
+                        <input id="email" name="email" type="email" autocomplete="username" maxlength="254" required aria-describedby="email-hint">
+                        <p id="email-hint" class="field-hint">변경한 이메일로 로그인하게 됩니다.</p>
+                    </div>
+                    <div class="profile-field profile-wide">
+                        <label for="department">학과</label>
+                        <input id="department" name="department" autocomplete="organization-title" maxlength="100" placeholder="예: 컴퓨터공학과">
+                    </div>
+                    <div class="major-options profile-wide">
+                        <p id="major-hint" class="field-hint">복수전공·부전공을 선택하면 옆에 전공명을 입력해 주세요. 둘 다 선택할 수 있습니다.</p>
+                        <div class="major-option">
+                            <label class="major-toggle" for="has-double-major">
+                                <input id="has-double-major" type="checkbox" aria-controls="double-major" aria-describedby="major-hint">
+                                복수전공
+                            </label>
+                            <input id="double-major" class="major-name" name="doubleMajor" aria-label="복수전공 전공명" maxlength="100" placeholder="예: 경영학과" disabled>
+                        </div>
+                        <div class="major-option">
+                            <label class="major-toggle" for="has-minor">
+                                <input id="has-minor" type="checkbox" aria-controls="minor" aria-describedby="major-hint">
+                                부전공
+                            </label>
+                            <input id="minor" class="major-name" name="minor" aria-label="부전공 전공명" maxlength="100" placeholder="예: 수학과" disabled>
+                        </div>
+                    </div>
+                </div>
+                <section class="password-section" aria-labelledby="password-title">
+                    <h2 id="password-title">비밀번호 변경</h2>
+                    <p id="password-hint" class="field-hint">변경할 때만 두 칸 모두 입력해 주세요. 비워두면 기존 비밀번호가 유지됩니다. (15~128자)</p>
+                    <div class="profile-grid">
+                        <div class="profile-field">
+                            <label for="password">새 비밀번호</label>
+                            <input id="password" name="password" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="password-hint">
+                        </div>
+                        <div class="profile-field">
+                            <label for="password-confirm">새 비밀번호 확인</label>
+                            <input id="password-confirm" name="passwordConfirm" type="password" autocomplete="new-password" minlength="15" maxlength="128" aria-describedby="password-match">
+                            <p id="password-match" class="field-hint" role="status" aria-live="polite"></p>
+                        </div>
+                    </div>
+                </section>
+                <div class="profile-actions">
+                    <button id="save-profile" class="primary-button" type="submit">변경사항 저장</button>
+                    <button id="reset-profile" class="secondary-button" type="button">변경사항 취소</button>
+                </div>
+            </fieldset>
+        </form>
+        <p id="profile-message" class="profile-message" role="status" aria-live="polite">회원정보를 불러오는 중입니다.</p>
+        <button id="retry-profile" class="secondary-button" type="button" hidden>다시 불러오기</button>
+        <noscript>회원정보를 수정하려면 브라우저에서 JavaScript를 활성화해 주세요.</noscript>
+    </main>
+</body>
+</html>

@@ -18,6 +18,17 @@ export function dateKey(date = new Date()) {
   return `${String(date.getFullYear()).padStart(4, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+// 로컬 달력의 날짜끼리 비교하되, 일수 계산에는 UTC를 써서 서머타임 영향을 피합니다.
+export function ddayLabel(event, today = dateKey()) {
+  if (event.isDday !== true) return '';
+  const days = Math.round((Date.parse(`${event.date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
+  return days === 0 ? 'D-Day' : days > 0 ? `D-${days}` : `D+${-days}`;
+}
+
+export function todaysDdayEvents(events, today = dateKey()) {
+  return sortedEvents(events.filter(event => event.isDday === true && event.date === today));
+}
+
 export function monthCells(month) {
   requireCalendarMonth(month);
   const [year, number] = month.split('-').map(Number);

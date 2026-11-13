@@ -8,10 +8,13 @@ import {
     addCourse,
     updateCourse,
     removeCourse,
-    getCourses
+    getCourses,
+    CATEGORY_LABELS
 } from "/js/grades/grades.js";
 import { authRequest } from "/js/auth/api.js";
 import { createAcademicClient } from "/js/academic-api.js";
+import { createCalendarClient } from "/js/calendar-api.js";
+import { dateKey, todaysDdayEvents, eventPeriod } from "/js/calendar-model.js";
 
 const elements = {
     userName: document.querySelector("#user-name"),
@@ -54,6 +57,9 @@ const elements = {
 
 let courses = [];
 let userInfo;
+let userDepartment = "";
+let userDoubleMajor = "";
+let userMinor = "";
 let academicRequirements;
 let academicClient;
 let revision;
@@ -61,6 +67,7 @@ let saving = false;
 let editingCourseId = null;
 let deletingCourseId = null;
 let formTrigger = null;
+let ddayDismissal = null;
 
 const fields = elements.courseForm.elements;
 
@@ -113,6 +120,43 @@ async function checkLogin() {
 
         window.location.replace("/login.html");
         return null;
+    }
+}
+
+// 학사 데이터 로딩과 별개로 로그인 계정의 오늘 디데이를 확인합니다.
+async function loadDdayNotification(user) {
+    const notification = document.querySelector("#dday-notification");
+    const list = document.querySelector("#dday-notification-list");
+    notification.hidden = true;
+    list.replaceChildren();
+    try {
+        const { events } = await createCalendarClient(user.id).load();
+        const today = dateKey();
+        // 계정마다 마지막으로 닫은 날짜만 보관해 다른 계정과 다음 날 알림에 영향을 주지 않습니다.
+        ddayDismissal = { key: `endpoint:dday-dismissed:${user.id}`, date: today };
+        try {
+            if (window.localStorage.getItem(ddayDismissal.key) === today) return;
+        } catch {
+            // 브라우저 저장소를 사용할 수 없어도 오늘의 일정은 표시합니다.
+        }
+        const todayEvents = todaysDdayEvents(events, today);
+        for (const event of todayEvents) {
+            const item = document.createElement("li");
+            const title = document.createElement("strong");
+            title.textContent = event.title;
+            const period = document.createElement("span");
+            period.textContent = eventPeriod(event);
+            item.append(title, period);
+            list.append(item);
+        }
+        notification.hidden = todayEvents.length === 0;
+    } catch (error) {
+        if (error.status === 401) {
+            window.location.replace("/login.html");
+            return;
+        }
+        document.querySelector("#dday-message").textContent =
+            `디데이 알림을 불러오지 못했습니다. ${error.message} 새로고침해 주세요.`;
     }
 }
 
@@ -255,6 +299,9 @@ function renderFilteredCourses() {
 // 대시보드 요약 정보 갱신
 async function renderDashboard(user) {
     elements.userName.textContent = `${user.name}님`;
+    userDepartment = user.department?.trim() || "미등록";
+    userDoubleMajor = user.doubleMajor?.trim() || "";
+    userMinor = user.minor?.trim() || "";
 
     academicClient = createAcademicClient(user.id);
 
@@ -295,9 +342,19 @@ async function changeCurrentYear() {
 
 // 현재 과목과 학년을 기준으로 학점·GPA 요약과 과목 목록을 갱신합니다.
 function refreshDashboard() {
-    elements.dataSource.textContent =
-        `내 계정에 저장된 과목 · 현재 학년: ${userInfo.grade}학년. ` +
-        "과목과 학년은 계정별로 저장됩니다.";
+    const academicProfile = document.createElement("strong");
+    academicProfile.textContent = [
+        `현재 학년: ${userInfo.grade}학년`,
+        `학과: ${userDepartment}`,
+        userDoubleMajor ? `복수전공: ${userDoubleMajor}` : "",
+        userMinor ? `부전공: ${userMinor}` : ""
+    ].filter(Boolean).join(" · ");
+    elements.dataSource.replaceChildren(
+        "내 계정에 저장된 과목 · ",
+        academicProfile,
+        document.createElement("br"),
+        "과목과 학년은 계정별로 저장됩니다."
+    );
 
     const currentCredits = calculateCurrentCredits(courses);
     const earnedCredits = calculateEarnedCredits(courses);
@@ -363,6 +420,25 @@ function updateGradeField() {
         : "이수 완료 과목은 성적을 선택해 주세요. 평점은 자동 계산됩니다.";
 }
 
+// 선택한 전공만 추가할 수 있으며, 기존 과목의 이수 구분은 체크 해제 후에도 유지합니다.
+function updateCourseCategoryOptions(course) {
+    const categories = ["major", "general"];
+    if (userDoubleMajor) categories.push("double_major");
+    if (userMinor) categories.push("minor");
+
+    const legacyCategory = course && !categories.includes(course.category) ? course.category : null;
+    if (legacyCategory) categories.push(legacyCategory);
+
+    fields.category.replaceChildren(...categories.map(category => {
+        const option = document.createElement("option");
+        option.value = category;
+        option.textContent = CATEGORY_LABELS[category] + (category === legacyCategory ? " (기존 이수 구분)" : "");
+        option.disabled = category === legacyCategory;
+        return option;
+    }));
+    fields.category.value = course?.category || "major";
+}
+
 // 추가 또는 수정할 과목의 입력 폼을 엽니다.
 function openCourseForm(
     course = null,
@@ -372,6 +448,7 @@ function openCourseForm(
     formTrigger = trigger;
 
     elements.courseForm.reset();
+    updateCourseCategoryOptions(course);
     elements.courseFormMessage.textContent = "";
     showCourseMessage("");
 
@@ -578,7 +655,7 @@ async function initDashboard() {
 
         if (!user) return;
 
-        await renderDashboard(user);
+        await Promise.all([renderDashboard(user), loadDdayNotification(user)]);
     } catch (error) {
         elements.message.textContent =
             `대시보드 초기화 실패: ${error.message}`;
@@ -587,6 +664,17 @@ async function initDashboard() {
 
 // 로그아웃·학년 변경·과목 관리·학기 필터 이벤트 연결
 elements.logoutButton.addEventListener("click", logout);
+document.querySelector("#dismiss-dday").addEventListener("click", () => {
+    if (ddayDismissal) {
+        try {
+            window.localStorage.setItem(ddayDismissal.key, ddayDismissal.date);
+        } catch {
+            document.querySelector("#dday-message").textContent =
+                "알림은 닫았지만 브라우저에 닫기 기록을 저장하지 못했습니다. 다시 접속하면 표시될 수 있습니다.";
+        }
+    }
+    document.querySelector("#dday-notification").hidden = true;
+});
 
 elements.currentYear.addEventListener(
     "change",
