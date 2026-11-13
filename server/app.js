@@ -317,7 +317,9 @@ export async function createApp({
         saved = (await db.query(`UPDATE ${usersTable}
           SET name = $1, email = $2, department = $3, password_hash = COALESCE($4, password_hash),
             double_major = COALESCE($8, double_major), minor = COALESCE($9, minor)
-          WHERE id = $5 AND ($10 IS NULL OR password_hash = $10)
+          -- PostgreSQL에서는 타입 없는 NULL 검사가 오류를 유발할 수 있으므로,
+          -- SQLite와 PostgreSQL 모두 지원하는 CAST로 이전 해시 조건을 명시합니다.
+          WHERE id = $5 AND (CAST($10 AS TEXT) IS NULL OR password_hash = $10)
             AND EXISTS (SELECT 1 FROM ${sessionsTable}
               WHERE token_hash = $6 AND user_id = $5 AND expires_at > $7)
           RETURNING id, email, name, department, double_major AS "doubleMajor", minor`,

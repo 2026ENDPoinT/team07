@@ -26,6 +26,7 @@ const hints = new Map(Object.entries({
   '28000': 'PostgreSQL rejected the connection authorization. Check the pooler username and connection settings.',
   '3D000': 'PostgreSQL database does not exist. Check the database name in DATABASE_URL.',
   '42501': 'PostgreSQL permission denied. Initial schema setup requires a DB owner connection, not a Supabase API key.',
+  '42P18': 'PostgreSQL could not infer a query parameter type. Verify the deployed profile UPDATE SQL has an explicit CAST for the nullable password hash.',
   '42P01': 'PostgreSQL table is missing. Check app_private schema initialization and the deployed code version.',
   '42703': 'PostgreSQL column is missing. Check database schema compatibility with the deployed code.',
   '53300': 'PostgreSQL connection limit reached. Check pooler capacity and other active deployments.',
@@ -47,6 +48,11 @@ export function failureDetails(error) {
     if (!current || seen.has(current)) continue;
     seen.add(current);
     if (hints.has(current.code)) return `[${current.code}] ${hints.get(current.code)}`;
+    // 알려지지 않은 PostgreSQL SQLSTATE도 코드만 기록합니다.
+    // 데이터베이스 오류 원문에는 비밀번호 해시나 SQL 파라미터가 포함될 수 있습니다.
+    if (typeof current.code === 'string' && /^[A-Z0-9]{5}$/.test(current.code)) {
+      return `[${current.code}] PostgreSQL request failed; review the SQLSTATE and deployed schema.`;
+    }
     if (current.cause) pending.push(current.cause);
     if (Array.isArray(current.errors)) pending.push(...current.errors.slice(0, 10));
   }

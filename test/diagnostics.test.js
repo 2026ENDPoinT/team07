@@ -14,6 +14,10 @@ test('deployment diagnostics identify known causes without exposing error detail
   }
   const networkError = new AggregateError([Object.assign(new Error(secret), { code: 'ETIMEDOUT' })]);
   assert.match(failureDetails(networkError), /^\[ETIMEDOUT\]/);
+  assert.match(failureDetails(Object.assign(new Error(secret), { code: '42P18' })), /^\[42P18\]/);
+  const unknownPostgresError = failureDetails(Object.assign(new Error(secret), { code: '23502' }));
+  assert.match(unknownPostgresError, /^\[23502\]/);
+  assert.doesNotMatch(unknownPostgresError, /private-user|private-password|private-host/);
   const unknown = new Error(secret);
   unknown.cause = unknown;
   assert.match(failureDetails(unknown), /^\[UNKNOWN\]/);
