@@ -1,15 +1,22 @@
+import { getEffectiveCourses } from "./grades.js";
+
 //gpa 계산 구현 스크립트
 //@param {Array} courses 과목 데이터 배열
 //@param {string|null} semester 학기 (null 이면 전체) : 이때의 학기는 사용자의 선택 학기를 나타냄
 //@returns {Object} GPA 및 학점 정보 
-function calculateGPA(courses, semester = null) {
+function calculateGPA(courses, semester = null, applyRetake = false) {
     //데이터 유효성 검사 : 과목 데이터가 배열이 아니면 throw
     if (!Array.isArray(courses)) {
         throw new TypeError("과목 데이터는 배열이어야 합니다.");
     }
 
+    // 누적 GPA 계산일 경우 재수강 이전 기록 제외
+    const sourceCourses = applyRetake
+    ? getEffectiveCourses(courses)
+    : courses;
+
     //특정 학기 또는 전체 과목 선택 (Null => 전체 || semester => 사용자 지정 학기)
-    const targetCourses = courses.filter(course =>
+    const targetCourses = sourceCourses.filter(course =>
         semester === null || course.semester === semester
     ); //filter >> 
 
@@ -95,7 +102,7 @@ export function calculateSemesterGPA(courses, semester) {
 //@param {Array} courses 과목 데이터 배열
 //@returns {Object} 누적 GPA 및 학점 정보
 export function calculateCumulativeGPA(courses) {
-    return calculateGPA(courses);
+    return calculateGPA(courses, null, true);
 }
 
 // 중요!! : calculateSemesterGPA() 와 calculateCumulativeGPA 함수는 아래의 형식으로 반환합니다
