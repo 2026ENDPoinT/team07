@@ -17,13 +17,16 @@ export function validateCalendarState(body) {
   }
   const ids = new Set();
   const events = body.events.map(event => {
-    if (!onlyKeys(event, ['id', 'title', 'date', 'time', 'endDate', 'endTime', 'notes'])
+    if (!onlyKeys(event, ['id', 'title', 'date', 'time', 'endDate', 'endTime', 'notes', 'isDday'])
         || typeof event.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(event.id) || ids.has(event.id)
         || typeof event.title !== 'string' || !event.title.trim() || event.title.trim().length > 100
         || !isCalendarDate(event.date)
         || !isTime(event.time)
         || typeof event.notes !== 'string' || event.notes.length > 2000) {
       throw fail('일정 제목(1~100자), 날짜, 시간, 메모(최대 2,000자)를 확인해 주세요.');
+    }
+    if (Object.hasOwn(event, 'isDday') && typeof event.isDday !== 'boolean') {
+      throw fail('디데이 설정은 켜기 또는 끄기로 선택해 주세요.');
     }
     const hasEnd = Object.hasOwn(event, 'endDate') || Object.hasOwn(event, 'endTime');
     if (hasEnd) {
@@ -39,7 +42,8 @@ export function validateCalendarState(body) {
     }
     ids.add(event.id);
     return { id: event.id, title: event.title.trim(), date: event.date, time: event.time,
-      ...(hasEnd ? { endDate: event.endDate, endTime: event.endTime } : {}), notes: event.notes.trim() };
+      ...(hasEnd ? { endDate: event.endDate, endTime: event.endTime } : {}), notes: event.notes.trim(),
+      ...(Object.hasOwn(event, 'isDday') ? { isDday: event.isDday } : {}) };
   });
   return { events, revision: body.revision };
 }

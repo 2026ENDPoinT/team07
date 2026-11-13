@@ -19,6 +19,7 @@
 
             <div class="user-area">
                 <span id="user-name">사용자</span>
+                <a class="logout-button" href="/mypage.html">마이페이지</a>
                 <button id="logout-button" class="logout-button">
                     로그아웃
                 </button>
@@ -26,6 +27,15 @@
         </header>
 
         <main class="main-content">
+            <section id="dday-notification" class="dday-notification" aria-labelledby="dday-notification-title" hidden>
+                <div class="section-heading">
+                    <h2 id="dday-notification-title">오늘은 D-Day입니다!</h2>
+                    <button id="dismiss-dday" class="secondary-button" type="button" aria-label="디데이 알림 닫기">닫기</button>
+                </div>
+                <div role="status" aria-live="polite" aria-atomic="true"><ul id="dday-notification-list"></ul></div>
+                <a href="/calendar.html">달력에서 일정 확인하기 →</a>
+            </section>
+            <p id="dday-message" class="dashboard-message" role="status" aria-live="polite"></p>
             <section class="welcome-section">
                 <div>
                     <p class="eyebrow">ACADEMIC MANAGEMENT SYSTEM</p>
@@ -182,7 +192,6 @@
                         <label for="course-category">이수 구분
                             <select id="course-category" name="category">
                                 <option value="major">전공</option>
-                                <option value="minor">부전공</option>
                                 <option value="general">교양</option>
                             </select>
                         </label>

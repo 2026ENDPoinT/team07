@@ -36,6 +36,10 @@
 .event-dialog label { display: block; margin: 14px 0 8px; font-size: 13px; }
 .event-dialog input, .event-dialog textarea { width: 100%; min-width: 0; padding: 10px; border: 1px solid var(--border); border-radius: 7px; font: inherit; background: var(--surface); color: var(--text); }
 .event-dialog textarea { resize: vertical; }
+.event-dialog .dday-setting { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.event-dialog .dday-setting input { width: 18px; height: 18px; padding: 0; accent-color: var(--primary); }
+.dday-badge { display: inline-block; padding: 4px 8px; border-radius: 5px; background: #fff0db; color: #8a4b08; font-size: 12px; font-weight: 700; }
+.day-event-dday { background: #fff0db; color: #8a4b08; }
 .event-date-time { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .dialog-actions { justify-content: flex-end; flex-wrap: wrap; }
 .calendar-page :is(a, input, textarea):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }

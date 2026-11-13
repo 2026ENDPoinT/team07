@@ -22,6 +22,7 @@ npm start
 - `public/css/auth.css`: 로그인 전용 스타일
 - `public/js/auth/login.js`: 폼 처리
 - `public/js/auth/api.js`: 다른 페이지에서도 재사용할 인증 API 함수
+- `public/mypage.html`, `public/mypage.js`, `public/css/mypage.css`: 회원정보 조회·수정 대시보드
 - `server/app.js`: Node HTTP 서버, 인증 API, 세션·출처 검사
 - `server/password.js`: scrypt 비밀번호 해시 및 검증
 - `server/db.js`, `server/schema.sql`: SQLite DB 및 테이블 생성
@@ -37,7 +38,8 @@ npm start
 | --- | --- | --- |
 | POST | `/api/auth/signup` | `{ name, email, password }` → `{ user }`, 자동 로그인 |
 | POST | `/api/auth/login` | `{ email, password }` → `{ user }` |
-| GET | `/api/auth/me` | `{ user: { id, email, name } }`; 미로그인 401 |
+| GET | `/api/auth/me` | `{ user: { id, email, name, department, doubleMajor, minor } }`; 미로그인 401 |
+| POST | `/api/auth/profile` | `{ name, email, department, doubleMajor?, minor?, password?, passwordConfirm? }` → `{ user }` |
 | POST | `/api/auth/logout` | `{}` → `{ message }`, 서버 세션 폐기 |
 | GET | `/api/academic` | `{ courses, profile: { grade }, revision }` |
 | PUT | `/api/academic` | `{ courses, profile: { grade }, revision }` → 저장된 전체 데이터와 증가한 버전 |
@@ -46,6 +48,8 @@ npm start
 | PUT | `/api/calendar` | `{ events, revision }` → 저장된 일정 목록과 증가한 버전 |
 
 이름은 공백 제거 후 1~50자, 비밀번호는 15~128자입니다. 이메일은 앞뒤 공백 제거 및 소문자 변환 후 저장합니다. 오류 응답은 `{ message }`입니다. POST 요청은 `APP_ORIGIN`과 동일한 Origin 헤더가 필요합니다. 브라우저의 같은 출처 fetch에서는 자동 전송됩니다.
+
+로그아웃 옆의 마이페이지 버튼은 `/mypage.html`로 이동합니다. 아이디는 기존 로그인 방식과 같은 이메일이며, 학과는 공백 제거 후 최대 100자(빈 값 허용)입니다. 회원정보 수정에는 로그인 세션과 `X-Account-Id: <현재 사용자 id>` 헤더가 필요합니다. 비밀번호 두 칸을 모두 비우거나 생략하면 기존 비밀번호를 유지하고, 변경 시에는 두 값의 일치와 길이를 브라우저·서버에서 검사합니다. 아이디 중복은 409로 거부하며, 검증에 실패하면 다른 입력값도 저장하지 않습니다. 기존 SQLite·PostgreSQL 계정에는 서버 시작 시 빈 학과 컬럼을 자동 추가합니다. `test/profile.test.js`와 PostgreSQL 테스트에서 변경·중복·입력 검증·재로그인·재시작 후 유지·구형 DB 호환을 확인합니다.
 
 학사 API는 유효한 로그인 세션과 `X-Account-Id: <현재 사용자 id>` 헤더가 필요합니다. 화면에서는 `createAcademicClient(user.id)`를 사용하세요. 이 헤더는 다른 탭에서 계정이 바뀌었는지 검사하는 용도이며, DB 선택에는 세션의 사용자 ID만 사용합니다. 누락·불일치는 403, 미로그인은 401입니다. PUT에는 같은 출처의 Origin과 JSON이 필요하며, 최신 조회 결과의 `revision`을 보내야 합니다. 다른 화면에서 먼저 수정했으면 409로 거부합니다. 저장 실패 시 화면의 기존 데이터는 유지합니다.
 
@@ -56,6 +60,10 @@ npm start
 기존 인증 DB는 새 매핑 테이블을 추가해 호환하며 계정·세션을 유지합니다. 개인 DB는 빈 목록·1학년으로 시작합니다. 소유자가 없는 브라우저 공용 `team07.courses`와 기존 학년 저장값은 자동으로 가져오거나 삭제하지 않습니다. 예시 JSON을 개인 과목으로 자동 등록하지 않습니다. 대시보드와 성적 분석은 모두 개인 API만 사용합니다.
 
 개인 데이터 API를 추가할 때는 `await currentUser(req)`로 로그인 사용자를 확인하고 전용 저장소를 사용하세요. 클라이언트의 사용자 ID나 파일명으로 저장소를 선택하면 안 됩니다. 화면의 로그인 여부 확인만으로 데이터 접근을 보호할 수는 없습니다. 현재 서버는 필요한 파일 경로만 명시적으로 공개하므로 새 페이지를 추가할 때 `staticFiles`에도 등록해야 합니다. 공개된 학사 JSON은 예시 데이터이며 실제 계정의 학적·과목 데이터가 아닙니다.
+
+복수전공·부전공은 마이페이지의 개별 체크박스로 선택하고 옆 입력란에 전공명을 입력합니다. 둘 다 선택할 수 있고, 선택된 항목의 전공명은 필수입니다. API의 `doubleMajor`·`minor`는 공백 제거 후 최대 100자의 전공명이며 빈 문자열은 미선택, 필드 생략은 기존 값 유지를 뜻합니다. 체크 해제 후 저장하면 해당 전공명도 지워집니다. 기존 계정에는 서버 시작 시 두 컬럼을 자동 추가하며, 재로그인·서버 재시작 후에도 선택과 전공명을 유지합니다.
+
+과목 추가의 이수 구분은 기본적으로 전공(`major`)·교양(`general`)만 표시하며, 저장한 복수전공·부전공 설정에 따라 복수전공(`double_major`)·부전공(`minor`)을 각각 추가합니다. 선택을 해제한 뒤 기존 과목을 수정하면 그 과목의 기존 이수 구분을 유지할 수 있습니다. 복수전공·부전공 과목도 전체 학점·GPA에 포함되며 주전공 졸업 학점과는 구분합니다.
 
 ## 설정
 

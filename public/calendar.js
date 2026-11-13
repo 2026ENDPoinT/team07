@@ -1,6 +1,6 @@
 import { authRequest } from '/js/auth/api.js';
 import { createCalendarClient } from '/js/calendar-api.js';
-import { MIN_CALENDAR_YEAR, MAX_CALENDAR_YEAR, calendarMonth, dateKey, monthCells, moveMonth, sortedEvents, eventRange, eventOccursOn, eventOverlapsMonth, eventPeriod } from '/js/calendar-model.js';
+import { MIN_CALENDAR_YEAR, MAX_CALENDAR_YEAR, calendarMonth, dateKey, monthCells, moveMonth, sortedEvents, eventRange, eventOccursOn, eventOverlapsMonth, eventPeriod, ddayLabel } from '/js/calendar-model.js';
 
 const $ = selector => document.querySelector(selector);
 let selected = dateKey();
@@ -60,7 +60,12 @@ function render() {
     button.setAttribute('aria-label', `${labelDate(key)}${key === today ? ', 오늘' : ''}, 일정 ${dayEvents.length}개`);
     if (key === today) button.setAttribute('aria-current', 'date');
     button.append(element('span', 'day-number', String(Number(key.slice(8)))));
-    for (const event of dayEvents.slice(0, 2)) button.append(element('span', 'day-event', event.title));
+    for (const event of dayEvents.slice(0, 2)) {
+      const label = ddayLabel(event, today);
+      const chip = element('span', `day-event${label ? ' day-event-dday' : ''}`, `${label ? `${label} · ` : ''}${event.title}`);
+      chip.title = chip.textContent;
+      button.append(chip);
+    }
     if (dayEvents.length > 2) button.append(element('span', 'day-more', `+${dayEvents.length - 2}개`));
     button.addEventListener('click', () => {
       selected = key;
@@ -77,6 +82,8 @@ function render() {
   $('#event-list').replaceChildren(...(dayEvents.length ? dayEvents.map(event => {
     const item = element('li', 'event-card');
     item.append(element('span', 'event-time', eventPeriod(event)), element('h3', '', event.title));
+    const label = ddayLabel(event, today);
+    if (label) item.append(element('span', 'dday-badge', label));
     if (event.notes) item.append(element('p', 'event-notes', event.notes));
     const actions = element('div', 'form-actions');
     for (const [action, label, className] of [['edit', '수정', 'secondary-button'], ['delete', '삭제', 'delete-button']]) {
@@ -113,6 +120,7 @@ function openEditor(event) {
   $('#event-end-time').value = event ? eventRange(event).endTime : '';
   updateRangeConstraints();
   $('#event-notes').value = event?.notes ?? '';
+  $('#event-dday').checked = event?.isDday === true;
   $('#event-message').textContent = '';
   controls();
   dialog.showModal();
@@ -182,7 +190,7 @@ form.addEventListener('submit', async event => {
     $('#event-message').textContent = '종료 시점은 시작 시점보다 빠를 수 없습니다.';
     return;
   }
-  const item = { id: editingId ?? crypto.randomUUID(), title, date, time, endDate, endTime, notes: $('#event-notes').value };
+  const item = { id: editingId ?? crypto.randomUUID(), title, date, time, endDate, endTime, notes: $('#event-notes').value, isDday: $('#event-dday').checked };
   const events = editingId ? state.events.map(old => old.id === editingId ? item : old) : [...state.events, item];
   busy = true;
   controls();
