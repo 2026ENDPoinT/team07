@@ -48,9 +48,10 @@ function calculateGPA(courses, semester = null, applyRetake = false) {
     //성적 평점 유효성 검사 : 0 미만 || 4.5 초과 throw
     completedCourses.forEach(course => {
         if (
-            !Number.isFinite(course.gradePoint) ||
+            course.gradePoint !== null &&
+            (!Number.isFinite(course.gradePoint) ||
             course.gradePoint < 0 ||
-            course.gradePoint > 4.5
+            course.gradePoint > 4.5)
         ) {
             throw new TypeError("성적 평점 데이터가 올바르지 않습니다.");
         }
