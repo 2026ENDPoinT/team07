@@ -1,3 +1,14 @@
 {
-    "key 내용" : "value 값 >> 성적 평가 기준"
+  "gradingType": "relative",
+  "studentCount": 40,
+  "gradeDistribution": {
+    "A+": 0.15,
+    "A0": 0.15,
+    "B+": 0.20,
+    "B0": 0.20,
+    "C+": 0.15,
+    "C0": 0.10,
+    "D+": 0.03,
+    "D0": 0.02
+  }
 }

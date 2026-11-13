@@ -1,3 +1,15 @@
 {
-    "key 내용" : "value 값 >> 졸업 & 학년 수료 기준"
+  "graduation": {
+    "totalCredits": 130,
+    "majorCredits": 70,
+    "minorCredits": 30,
+    "doubleMajorCredits": 36,
+    "generalCredits": 30
+  },
+  "completion": {
+    "firstYear": 33,
+    "secondYear": 65,
+    "thirdYear": 98,
+    "fourthYear": 130
+  }
 }

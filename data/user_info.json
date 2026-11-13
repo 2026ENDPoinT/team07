@@ -1,3 +1,8 @@
 {
-    "key 내용" : "value 값 >> 사용자 정보"
+  "userId": "202600000",
+  "department": "컴퓨터공학과",
+  "grade": 1,
+  "majorPrograms": [
+    "major"
+  ]
 }
