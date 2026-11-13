@@ -12,7 +12,7 @@ import { launch } from './http-helper.js';
 import { verifyProfileFlow } from './profile-helper.js';
 
 const origin = 'http://localhost:3000';
-const password = 'test-only-password-2026';
+const password = 'PostgresTest2026!';
 const course = { id: 'test-course', courseName: '자료구조', credits: 3, grade: 'A+', gradePoint: 99,
   semester: '2026-1', category: 'major', status: 'completed', isRetake: false };
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
@@ -63,7 +63,7 @@ test('PostgreSQL profile migration and updates preserve accounts and password co
     const expected = await verifyProfileFlow(service);
     await service.close();
     service = await launch(':memory:', { database: await pg.connect() });
-    const login = await service.request('/api/auth/login', { email: expected.email, password: 'updated-test-password-2026' });
+    const login = await service.request('/api/auth/login', { email: expected.email, password: 'UpdatedTest2026!' });
     assert.equal(login.status, 200);
     assert.deepEqual((await login.json()).user, expected);
   } finally {
@@ -122,8 +122,12 @@ test('PostgreSQL HTTP flow keeps sessions, academic isolation, revisions and pri
     const bSignup = await service.request('/api/auth/signup', { name: 'B', email: 'b@example.com', password });
     assert.equal(aSignup.status, 201);
     assert.equal(bSignup.status, 201);
-    let aCookie = cookieOf(aSignup);
-    const bCookie = cookieOf(bSignup);
+    assert.equal(aSignup.headers.get('set-cookie'), null);
+    assert.equal(bSignup.headers.get('set-cookie'), null);
+    assert.equal((await service.request('/api/auth/me')).status, 401);
+    assert.equal((await service.db.query('SELECT count(*) AS total FROM app_private.sessions')).rows[0].total, '0');
+    let aCookie = cookieOf(await service.request('/api/auth/login', { email: 'a@example.com', password }));
+    const bCookie = cookieOf(await service.request('/api/auth/login', { email: 'b@example.com', password }));
     const a = (await aSignup.json()).user;
     const b = (await bSignup.json()).user;
     assert.equal(typeof a.id, 'string');
@@ -199,7 +203,7 @@ test('PostgreSQL refuses a write if its session is revoked during upload', async
   try {
     service = await launch(':memory:', { database: await pg.connect() });
     const signup = await service.request('/api/auth/signup', { name: 'A', email: 'a@example.com', password });
-    const cookie = cookieOf(signup);
+    const cookie = cookieOf(await service.request('/api/auth/login', { email: 'a@example.com', password }));
     const id = (await signup.json()).user.id;
     const body = JSON.stringify({ courses: [course], profile: { grade: 4 }, revision: 0 });
     const reading = new Promise(resolve => {
@@ -239,7 +243,9 @@ test('PostgreSQL calendar persists per account with independent revisions and pr
     service = await launch(':memory:', { database: await pg.connect() });
     const signup = async name => {
       const response = await service.request('/api/auth/signup', { name, email: `${name}@example.com`, password });
-      return { cookie: cookieOf(response), id: (await response.json()).user.id };
+      const login = await service.request('/api/auth/login', { email: `${name}@example.com`, password });
+      assert.equal(login.status, 200);
+      return { cookie: cookieOf(login), id: (await response.json()).user.id };
     };
     const a = await signup('calendar-a');
     const b = await signup('calendar-b');
@@ -283,7 +289,9 @@ test('PostgreSQL account throttles persist across restart and production cookies
   try {
     service = await launch(':memory:', { database: await pg.connect(), accountLimit: 2, origin: secureOrigin, production: true });
     const signup = await service.request('/api/auth/signup', { name: 'A', email: 'a@example.com', password }, null, secureOrigin);
-    assert.match(signup.headers.get('set-cookie'), /^__Host-team07_session=.*HttpOnly; SameSite=Lax; Secure$/);
+    assert.equal(signup.headers.get('set-cookie'), null);
+    const login = await service.request('/api/auth/login', { email: 'a@example.com', password }, null, secureOrigin);
+    assert.match(login.headers.get('set-cookie'), /^__Host-team07_session=.*HttpOnly; SameSite=Lax; Secure$/);
     for (let i = 0; i < 2; i++) {
       assert.equal((await service.request('/api/auth/login', { email: 'a@example.com', password: 'incorrect-long-password' }, null, secureOrigin)).status, 401);
     }

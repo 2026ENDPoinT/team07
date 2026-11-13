@@ -1,7 +1,37 @@
 import { authRequest } from './api.js';
+import { getPasswordErrors, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH } from './password-policy.js';
 
 const $ = id => document.getElementById(id);
 let signup = false;
+
+const touchedPasswords = new Set();
+function validatePasswords() {
+  let valid = true;
+  for (const [id, hint] of [['password', 'password-hint'], ['confirm', 'confirm-hint']]) {
+    const input = $(id);
+    const active = id === 'password' || signup;
+    const errors = active ? getPasswordErrors(input.value) : [];
+    if (signup && id === 'confirm' && input.value !== $('password').value) {
+      errors.push('비밀번호 확인이 일치하지 않습니다.');
+    }
+    const feedback = errors.join(' ');
+    // 로그인에서는 이전 정책의 비밀번호도 허용하고 조건은 안내만 합니다.
+    input.setCustomValidity(signup ? feedback : '');
+    if (signup && errors.length) valid = false;
+    const visible = active && (Boolean(input.value) || touchedPasswords.has(id));
+    $(hint).textContent = visible ? feedback : '';
+    $(hint).dataset.error = String(visible && errors.length > 0);
+    input.setAttribute('aria-invalid', String(signup && visible && errors.length > 0));
+  }
+  return valid;
+}
+for (const id of ['password', 'confirm']) {
+  for (const event of ['input', 'invalid']) $(id).addEventListener(event, () => {
+    touchedPasswords.add(id);
+    validatePasswords();
+    if (event === 'input' && $('message').dataset.error === 'true') message('');
+  });
+}
 // 안내 및 오류 메시지는 HTML로 해석하지 않고 텍스트로 표시합니다.
 function message(text, error = false) {
   $('message').textContent = text;
@@ -24,6 +54,8 @@ function showUser(user) {
   $('account').hidden = !user;
   $('welcome').textContent = user ? `${user.name}님, 환영합니다. (${user.email})` : '';
   $('auth-form').reset();
+  touchedPasswords.clear();
+  validatePasswords();
 }
 // 로그인과 회원가입 모드를 전환하며 필요한 입력 항목만 활성화합니다.
 $('switch-mode').addEventListener('click', () => {
@@ -34,8 +66,12 @@ $('switch-mode').addEventListener('click', () => {
     $(input).required = signup;
   }
   $('password').autocomplete = signup ? 'new-password' : 'current-password';
+  $('password').minLength = signup ? PASSWORD_MIN_LENGTH : 1;
+  $('password').maxLength = signup ? PASSWORD_MAX_LENGTH : 128;
   $('password').value = '';
   $('confirm').value = '';
+  touchedPasswords.clear();
+  validatePasswords();
   $('title').textContent = signup ? '반가워요, 함께 시작해요' : '다시 만나 반가워요';
   $('description').textContent = signup ? '나만의 학업 여정을 만들어 보세요.' : '오늘도 한 걸음, 목표에 가까워질 시간이에요.';
   $('switch-mode').textContent = signup ? '이미 계정이 있으신가요? 로그인' : '아직 ENDPoinT 계정이 없으신가요? 회원가입';
@@ -45,9 +81,12 @@ $('switch-mode').addEventListener('click', () => {
 // 비밀번호 확인 후 로그인 또는 회원가입 API를 호출하고 결과를 화면에 반영합니다.
 $('auth-form').addEventListener('submit', async event => {
   event.preventDefault();
-  if (signup && $('password').value !== $('confirm').value) {
-    message('비밀번호 확인이 일치하지 않습니다.', true);
-    $('confirm').focus();
+  touchedPasswords.add('password');
+  if (signup) touchedPasswords.add('confirm');
+  if (!validatePasswords()) {
+    const invalid = $('password').validationMessage ? $('password') : $('confirm');
+    message(invalid.validationMessage, true);
+    invalid.reportValidity();
     return;
   }
   busy(true);
@@ -57,8 +96,14 @@ $('auth-form').addEventListener('submit', async event => {
       email: $('email').value, password: $('password').value,
       ...(signup ? { name: $('name').value } : {})
     });
+    if (signup) {
+      $('auth-form').reset();
+      window.alert(`${user.name}님, ENDPoinT 가입을 환영합니다! 로그인해 주세요.`);
+      window.location.replace('/login.html');
+      return;
+    }
     showUser(user);
-    message(signup ? '회원가입과 로그인이 완료되었습니다.' : '로그인되었습니다.');
+    message('로그인되었습니다.');
     $('logout').focus();
   } catch (error) { message(error.message, true); }
   finally { busy(false); }

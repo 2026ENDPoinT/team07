@@ -6,14 +6,14 @@ import { calculateGraduationCredits } from '../js/credits/graduation.js';
 import { calculateCumulativeGPA } from '../js/grades/gpa.js';
 
 const origin = 'http://localhost:3000';
-const password = 'password-for-tests-2026';
+const password = 'CourseTest2026!';
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
 
 test('double-major and minor courses retain their categories after profile changes and count toward total credits', async () => {
   const service = await launch(':memory:');
   try {
     const signup = await service.request('/api/auth/signup', { name: '전공 테스트', email: 'majors@example.com', password });
-    const cookie = cookieOf(signup);
+    const cookie = cookieOf(await service.request('/api/auth/login', { email: 'majors@example.com', password }));
     const user = (await signup.json()).user;
     const profile = { name: user.name, email: user.email, department: '컴퓨터공학과', doubleMajor: '경영학과', minor: '수학과' };
     const headers = { 'X-Account-Id': String(user.id) };
@@ -49,7 +49,9 @@ test('course edits persist per account; failed saves retain data and deleting al
     async function signup(name, email) {
       const response = await service.request('/api/auth/signup', { name, email, password });
       assert.equal(response.status, 201);
-      return { cookie: cookieOf(response), id: (await response.json()).user.id };
+      const login = await service.request('/api/auth/login', { email, password });
+      assert.equal(login.status, 200);
+      return { cookie: cookieOf(login), id: (await response.json()).user.id };
     }
     const first = await signup('A', 'a@example.com');
     const second = await signup('B', 'b@example.com');
