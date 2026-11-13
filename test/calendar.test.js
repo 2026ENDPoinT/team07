@@ -10,7 +10,7 @@ import { validateCalendarState } from '../server/calendar.js';
 import { MIN_CALENDAR_YEAR, MAX_CALENDAR_YEAR, calendarMonth, dateKey, monthCells, moveMonth, sortedEvents, eventRange, eventOccursOn, eventOverlapsMonth, eventPeriod, ddayLabel, todaysDdayEvents } from '../public/js/calendar-model.js';
 
 const origin = 'http://localhost:3000';
-const password = 'Calendar2026!';
+const password = 'calendar-test-password-2026';
 const event = { id: 'exam-1', title: '자료구조 시험', date: '2026-11-18', time: '09:30', notes: '강의실 301호' };
 const initial = { events: [], revision: 0 };
 const calendar = (service, account, state, options = {}) => service.request('/api/calendar', state, account.cookie, origin,
@@ -18,9 +18,7 @@ const calendar = (service, account, state, options = {}) => service.request('/ap
 async function signup(service, name) {
   const result = await service.request('/api/auth/signup', { name, email: `${name}@example.com`, password });
   assert.equal(result.status, 201);
-  const login = await service.request('/api/auth/login', { email: `${name}@example.com`, password });
-  assert.equal(login.status, 200);
-  return { cookie: login.headers.get('set-cookie').split(';')[0], id: (await result.json()).user.id };
+  return { cookie: result.headers.get('set-cookie').split(';')[0], id: (await result.json()).user.id };
 }
 
 test('calendar uses each existing personal DB, preserves academic data, and persists edits and deletion across restart', async () => {

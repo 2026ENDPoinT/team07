@@ -61,16 +61,15 @@
 </div>
 <section aria-labelledby="password-title" class="password-section">
 <h2 id="password-title">비밀번호 변경</h2>
-<p class="field-hint" id="password-help">변경할 때만 두 칸 모두 입력해 주세요. 비워두면 기존 비밀번호가 유지됩니다.</p>
+<p class="field-hint" id="password-hint">변경할 때만 두 칸 모두 입력해 주세요. 비워두면 기존 비밀번호가 유지됩니다. (15~128자)</p>
 <div class="profile-grid">
 <div class="profile-field">
 <label for="password">새 비밀번호</label>
-<input aria-describedby="password-help password-hint" autocomplete="new-password" id="password" maxlength="20" minlength="8" name="password" type="password"/>
-<p aria-live="polite" class="field-hint" id="password-hint" role="status"></p>
+<input aria-describedby="password-hint" autocomplete="new-password" id="password" maxlength="128" minlength="15" name="password" type="password"/>
 </div>
 <div class="profile-field">
 <label for="password-confirm">새 비밀번호 확인</label>
-<input aria-describedby="password-match" autocomplete="new-password" id="password-confirm" maxlength="20" minlength="8" name="passwordConfirm" type="password"/>
+<input aria-describedby="password-match" autocomplete="new-password" id="password-confirm" maxlength="128" minlength="15" name="passwordConfirm" type="password"/>
 <p aria-live="polite" class="field-hint" id="password-match" role="status"></p>
 </div>
 </div>

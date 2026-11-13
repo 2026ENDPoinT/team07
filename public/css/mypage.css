@@ -18,7 +18,7 @@
 .password-section > .field-hint { margin-bottom: 20px; }
 .profile-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
 .profile-message { min-height: 24px; color: #315b91; font-size: 14px; line-height: 1.7; }
-.profile-message[data-error="true"], #password-hint[data-error="true"], #password-match[data-error="true"] { color: #b42318; }
+.profile-message[data-error="true"], #password-match[data-error="true"] { color: #b42318; }
 .mypage a:focus-visible, .profile-card input:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
 @media (max-width: 600px) {
     .mypage .main-content { width: 90%; margin-top: 28px; }

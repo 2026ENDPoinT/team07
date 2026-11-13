@@ -26,7 +26,6 @@ body {display:block;min-height:100vh;padding:0;background:#fff}
 .auth-stage .card input {border:1px solid #dce3ee;border-radius:11px;padding:14px 15px;background:#fff;font-size:14px;color:#17243b}
 .auth-stage .card input:focus {outline:2px solid #b9cefa;outline-offset:0;border-color:#2563eb}
 .auth-stage .card .hint {margin:7px 0 13px;font-size:11px;color:#63718a}
-.auth-stage .card .hint[data-error="true"] {color:#b42318}
 .auth-stage .card button {background:#2563eb;border-radius:10px;border:0;margin-top:26px;padding:14px 16px;font-size:14px;box-shadow:0 6px 12px rgba(37,99,235,.08)}
 .auth-stage .card button:hover {background:#1d4ed8}
 .auth-stage .card button.secondary {margin:12px 0 0;padding:12px 10px;color:#63718a;background:transparent;border:0;box-shadow:none;font-size:12px;font-weight:600}

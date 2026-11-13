@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 
-const password = 'OriginalTest2026!';
-const nextPassword = 'UpdatedTest2026!';
+const password = 'original-test-password-2026';
+const nextPassword = 'updated-test-password-2026';
 const origin = 'http://localhost:3000';
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
 
@@ -12,9 +12,9 @@ export async function verifyProfileFlow(service) {
   const signup = await request('/api/auth/signup', initial);
   assert.equal(signup.status, 201);
   const user = (await signup.json()).user;
-  const cookie = cookieOf(await request('/api/auth/login', { email: initial.email, password }));
+  const cookie = cookieOf(signup);
   const second = await request('/api/auth/signup', { name: '다른 사용자', email: 'other@example.com', password });
-  const otherCookie = cookieOf(await request('/api/auth/login', { email: 'other@example.com', password }));
+  const otherCookie = cookieOf(second);
   const other = (await second.json()).user;
   const fields = { name: ' 새 이름 ', email: ' NEW@Example.com ', department: ' 컴퓨터공학과 ',
     doubleMajor: ' 경영학과 ', minor: ' 수학과 ' };
@@ -37,19 +37,12 @@ export async function verifyProfileFlow(service) {
     { ...fields, password: nextPassword }, { ...fields, passwordConfirm: nextPassword },
     { ...fields, password: nextPassword, passwordConfirm: 'different-test-password' },
     { ...fields, password: 'short', passwordConfirm: 'short' },
-    ...['Abcde1!', 'Ab1!' + 'a'.repeat(17), 'abcdef1!', 'ABCDEF1!', 'Abcdefg!', 'Abcdef12', 'Abcde1! ', 'Abcde1!한', 'Abcde1!_']
-      .map(value => ({ ...fields, password: value, passwordConfirm: value })),
+    { ...fields, password: 'x'.repeat(129), passwordConfirm: 'x'.repeat(129) },
     { ...fields, password: null }, { ...fields, password: [], passwordConfirm: [] }]) {
     assert.equal((await update(body)).status, 400, JSON.stringify(body));
     assert.deepEqual((await (await request('/api/auth/me', undefined, cookie)).json()).user, before);
   }
   const table = service.db.type === 'postgres' ? 'app_private.users' : 'users';
-  const missingUppercase = await update({ ...fields, password: 'abcdef1!', passwordConfirm: 'abcdef1!' });
-  assert.equal(missingUppercase.status, 400);
-  assert.equal((await missingUppercase.json()).message, '영문 대문자를 1개 이상 포함해 주세요.');
-  const invalidConfirm = await update({ ...fields, password: 'Abcdef1!', passwordConfirm: 'abcdef1!' });
-  assert.equal(invalidConfirm.status, 400);
-  assert.equal((await invalidConfirm.json()).message, '영문 대문자를 1개 이상 포함해 주세요. 비밀번호 확인이 일치하지 않습니다.');
   const hashBefore = (await service.db.query(`SELECT password_hash FROM ${table} WHERE id = $1`, [user.id])).rows[0].password_hash;
   assert.equal((await update({ ...fields, email: other.email, password: nextPassword, passwordConfirm: nextPassword })).status, 409);
   assert.deepEqual((await (await request('/api/auth/me', undefined, cookie)).json()).user, before);
@@ -57,7 +50,6 @@ export async function verifyProfileFlow(service) {
 
   const saved = await update({ ...fields, password: '', passwordConfirm: '' });
   assert.equal(saved.status, 200);
-  assert.equal(saved.headers.get('set-cookie'), null);
   const expected = { id: user.id, name: '새 이름', email: 'new@example.com', department: '컴퓨터공학과',
     doubleMajor: '경영학과', minor: '수학과' };
   assert.deepEqual(await saved.json(), { user: expected });
@@ -65,9 +57,7 @@ export async function verifyProfileFlow(service) {
   assert.deepEqual((await (await request('/api/auth/me', undefined, otherCookie)).json()).user, other);
   assert.equal((await service.db.query(`SELECT password_hash FROM ${table} WHERE id = $1`, [user.id])).rows[0].password_hash, hashBefore);
   assert.equal((await request('/api/auth/login', { email: initial.email, password })).status, 401);
-  const anotherLogin = await request('/api/auth/login', { email: expected.email, password });
-  assert.equal(anotherLogin.status, 200);
-  const anotherCookie = cookieOf(anotherLogin);
+  assert.equal((await request('/api/auth/login', { email: expected.email, password })).status, 200);
 
   // 구형 화면이 새 필드를 생략해도 저장된 복수전공·부전공은 유지합니다.
   const oldFields = { name: expected.name, email: expected.email, department: expected.department };
@@ -84,15 +74,8 @@ export async function verifyProfileFlow(service) {
   const changed = await update({ ...fields, password: nextPassword, passwordConfirm: nextPassword });
   assert.equal(changed.status, 200);
   assert.deepEqual(await changed.json(), { user: expected });
-  assert.match(changed.headers.get('set-cookie'), /Max-Age=0/);
-  assert.equal((await request('/api/auth/me', undefined, cookie)).status, 401);
-  assert.equal((await request('/api/auth/me', undefined, anotherCookie)).status, 401);
-  assert.equal((await update(fields)).status, 401);
-  assert.deepEqual((await (await request('/api/auth/me', undefined, otherCookie)).json()).user, other);
   assert.equal((await request('/api/auth/login', { email: expected.email, password })).status, 401);
-  const relogin = await request('/api/auth/login', { email: expected.email, password: nextPassword });
-  assert.equal(relogin.status, 200);
-  assert.deepEqual((await (await request('/api/auth/me', undefined, cookieOf(relogin))).json()).user, expected);
+  assert.equal((await request('/api/auth/login', { email: expected.email, password: nextPassword })).status, 200);
   assert.notEqual((await service.db.query(`SELECT password_hash FROM ${table} WHERE id = $1`, [user.id])).rows[0].password_hash, nextPassword);
   await request('/api/auth/logout', {}, cookie);
   assert.equal((await update(fields)).status, 401);

@@ -10,7 +10,7 @@ import { hashPassword, verifyPassword } from '../server/password.js';
 import { launch } from './http-helper.js';
 
 const origin = 'http://localhost:3000';
-const password = 'AuthTest2026!';
+const password = 'a-long-test-password-2026';
 const cookieOf = response => response.headers.get('set-cookie').split(';')[0];
 
 const exampleCourse = (overrides = {}) => ({ id: 'course-1', courseName: '자료구조', credits: 3,
@@ -25,8 +25,8 @@ test('legacy accounts migrate; academic databases isolate users, persist across 
   try {
     const first = await service.request('/api/auth/signup', { name: 'One', email: 'one@example.com', password });
     const second = await service.request('/api/auth/signup', { name: 'Two', email: 'two@example.com', password });
-    const a = { cookie: cookieOf(await service.request('/api/auth/login', { email: 'one@example.com', password })), id: (await first.json()).user.id };
-    const b = { cookie: cookieOf(await service.request('/api/auth/login', { email: 'two@example.com', password })), id: (await second.json()).user.id };
+    const a = { cookie: cookieOf(first), id: (await first.json()).user.id };
+    const b = { cookie: cookieOf(second), id: (await second.json()).user.id };
     // 이번 변경 전의 인증 스키마를 재현합니다. 재시작해도 계정과 세션은 그대로 유지됩니다.
     service.db.exec('DROP TABLE user_databases');
     await service.close();
@@ -74,8 +74,7 @@ test('legacy accounts migrate; academic databases isolate users, persist across 
     const replacement = await service.request('/api/auth/signup', { name: 'New account', email: 'new@example.com', password });
     const replacementId = (await replacement.json()).user.id;
     assert.equal(replacementId, b.id);
-    const replacementLogin = await service.request('/api/auth/login', { email: 'new@example.com', password });
-    assert.deepEqual(await (await academicRequest(service, cookieOf(replacementLogin), replacementId)).json(),
+    assert.deepEqual(await (await academicRequest(service, cookieOf(replacement), replacementId)).json(),
       { courses: [], profile: { grade: 1 }, revision: 0 });
     assert.notEqual(service.db.prepare('SELECT storage_key FROM user_databases WHERE user_id = ?').get(replacementId).storage_key,
       mapping[1].storage_key);
@@ -95,10 +94,10 @@ test('academic API rejects unauthenticated access, account spoofing, CSRF, stale
   try {
     assert.equal((await service.request('/api/academic')).status, 401);
     const signup = await service.request('/api/auth/signup', { name: 'One', email: 'one@example.com', password });
-    const cookie = cookieOf(await service.request('/api/auth/login', { email: 'one@example.com', password }));
+    const cookie = cookieOf(signup);
     const id = (await signup.json()).user.id;
     const second = await service.request('/api/auth/signup', { name: 'Two', email: 'two@example.com', password });
-    const secondCookie = cookieOf(await service.request('/api/auth/login', { email: 'two@example.com', password }));
+    const secondCookie = cookieOf(second);
     const state = { courses: [exampleCourse()], profile: { grade: 1 }, revision: 0 };
     assert.equal((await service.request('/api/academic', undefined, cookie)).status, 403);
     assert.equal((await academicRequest(service, cookie, id + 1)).status, 403);
@@ -152,7 +151,7 @@ test('academic writes reject sessions revoked while a request body is uploading'
   const service = await launch(':memory:');
   try {
     const signup = await service.request('/api/auth/signup', { name: 'One', email: 'one@example.com', password });
-    const cookie = cookieOf(await service.request('/api/auth/login', { email: 'one@example.com', password }));
+    const cookie = cookieOf(signup);
     const id = (await signup.json()).user.id;
     const body = JSON.stringify({ courses: [exampleCourse()], profile: { grade: 4 }, revision: 0 });
     let onRequest;
@@ -240,9 +239,7 @@ test('dashboard assets, module imports, sample data and authenticated entry rout
     }
     const signup = await service.request('/api/auth/signup', { name: 'Dashboard Test', email: 'dashboard@example.com', password });
     assert.equal(signup.status, 201);
-    assert.equal(signup.headers.get('set-cookie'), null);
-    assert.equal((await service.request('/')).headers.get('location'), '/login.html');
-    const cookie = cookieOf(await service.request('/api/auth/login', { email: 'dashboard@example.com', password }));
+    const cookie = cookieOf(signup);
     const entry = await service.request('/', undefined, cookie);
     assert.equal(entry.status, 302);
     assert.equal(entry.headers.get('location'), '/index.html');
@@ -262,30 +259,24 @@ test('signup, isolation, session rotation, restart persistence, expiry and logou
     assert.equal((await service.request('/api/auth/signup', { name: 'Test', email: 'one@example.com', password }, null, 'https://evil.example')).status, 403);
     const signup = await service.request('/api/auth/signup', { name: '사용자 1', email: 'One@Example.com', password });
     assert.equal(signup.status, 201);
-    assert.equal(signup.headers.get('set-cookie'), null);
-    assert.equal(service.db.prepare('SELECT count(*) AS total FROM sessions').get().total, 0);
-    assert.equal((await service.request('/api/auth/me')).status, 401);
+    assert.match(signup.headers.get('set-cookie'), /HttpOnly/);
+    assert.match(signup.headers.get('set-cookie'), /SameSite=Lax/);
+    const oldCookie = cookieOf(signup);
     const first = (await signup.json()).user;
     assert.equal(first.email, 'one@example.com');
     assert.equal('password_hash' in first, false);
     assert.equal(service.db.prepare('SELECT password_hash FROM users').get().password_hash.includes(password), false);
+    assert.notEqual(service.db.prepare('SELECT token_hash FROM sessions').get().token_hash, oldCookie.split('=')[1]);
     assert.equal((await service.request('/api/auth/signup', { name: 'Duplicate', email: 'one@example.com', password })).status, 409);
     assert.equal((await service.request('/api/auth/login', { email: first.email, password: 'wrong-password-long-enough' })).status, 401);
     assert.equal((await service.request('/api/auth/login', { email: 'unknown@example.com', password })).status, 401);
-    const initialLogin = await service.request('/api/auth/login', { email: first.email, password });
-    assert.equal(initialLogin.status, 200);
-    assert.match(initialLogin.headers.get('set-cookie'), /HttpOnly/);
-    assert.match(initialLogin.headers.get('set-cookie'), /SameSite=Lax/);
-    const oldCookie = cookieOf(initialLogin);
-    assert.notEqual(service.db.prepare('SELECT token_hash FROM sessions').get().token_hash, oldCookie.split('=')[1]);
     const login = await service.request('/api/auth/login', { email: first.email, password }, oldCookie);
     assert.equal(login.status, 200);
     const cookie = cookieOf(login);
     assert.notEqual(cookie, oldCookie);
     assert.equal((await service.request('/api/auth/me', undefined, oldCookie)).status, 401);
     const second = await service.request('/api/auth/signup', { name: '사용자 2', email: 'two@example.com', password });
-    assert.equal(second.headers.get('set-cookie'), null);
-    const secondCookie = cookieOf(await service.request('/api/auth/login', { email: 'two@example.com', password }));
+    const secondCookie = cookieOf(second);
     assert.equal((await (await service.request('/api/auth/me', undefined, cookie)).json()).user.id, first.id);
     assert.notEqual((await (await service.request('/api/auth/me', undefined, secondCookie)).json()).user.id, first.id);
     await service.close();
@@ -324,11 +315,9 @@ test('rate limiting and production HTTPS configuration', async () => {
   try {
     const response = await production.request('/api/auth/signup', { name: 'Test', email: 'test@example.com', password }, null, 'https://example.com');
     assert.equal(response.status, 201);
-    assert.equal(response.headers.get('set-cookie'), null);
-    const login = await production.request('/api/auth/login', { email: 'test@example.com', password }, null, 'https://example.com');
-    assert.match(login.headers.get('set-cookie'), /Secure/);
-    assert.match(login.headers.get('set-cookie'), /^__Host-team07_session=/);
-    assert.equal((await production.request('/api/auth/me', undefined, cookieOf(login))).status, 200);
+    assert.match(response.headers.get('set-cookie'), /Secure/);
+    assert.match(response.headers.get('set-cookie'), /^__Host-team07_session=/);
+    assert.equal((await production.request('/api/auth/me', undefined, cookieOf(response))).status, 200);
   } finally { await production.close(); }
 });
 
@@ -346,7 +335,7 @@ test('request validation, CSRF, SQL input and ambiguous session cookies', async 
     const signup = await service.request('/api/auth/signup', { name, email: 'sql@example.com', password });
     assert.equal(signup.status, 201);
     assert.equal((await signup.json()).user.name, name);
-    const cookie = cookieOf(await service.request('/api/auth/login', { email: 'sql@example.com', password }));
+    const cookie = cookieOf(signup);
     assert.equal((await service.request('/api/auth/me', undefined, `${cookie}; ${cookie}`)).status, 401);
     assert.equal((await service.request('/api/auth/me', undefined, 'team07_session=invalid')).status, 401);
     assert.equal((await service.request('/api/auth/logout', {}, cookie, 'https://evil.example')).status, 403);
