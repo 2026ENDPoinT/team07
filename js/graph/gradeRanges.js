@@ -1,5 +1,5 @@
 /** 등급별 상대평가 예상 인원. 비율은 각 등급의 개별 비율(%)이다. */
-const GRADES = ['A+', 'A0', 'B+', 'B0'];
+const GRADES = [ 'A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'D0' ];
 
 export function calculateGradeRanges(studentCount, gradingPolicy) {
   if (!Number.isSafeInteger(studentCount) || studentCount < 0) {
