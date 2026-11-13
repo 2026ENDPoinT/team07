@@ -14,7 +14,7 @@ import {
 import { authRequest } from "/js/auth/api.js";
 import { createAcademicClient } from "/js/academic-api.js";
 import { createCalendarClient } from "/js/calendar-api.js";
-import { dateKey, todaysDdayEvents, eventPeriod } from "/js/calendar-model.js";
+import { dateKey, todaysDdayEvents, eventPeriod, ddayLabel, upcomingCalendarEvents } from "/js/calendar-model.js";
 
 const elements = {
     userName: document.querySelector("#user-name"),
@@ -123,40 +123,72 @@ async function checkLogin() {
     }
 }
 
-// 학사 데이터 로딩과 별개로 로그인 계정의 오늘 디데이를 확인합니다.
-async function loadDdayNotification(user) {
-    const notification = document.querySelector("#dday-notification");
-    const list = document.querySelector("#dday-notification-list");
+// One authenticated calendar request populates both the upcoming panel and today's D-day alert.
+// Calendar events are kept in their existing schema; no artificial event types are added.
+async function loadCalendarSummary(user) {
+    const notification = document.querySelector('#dday-notification');
+    const ddayList = document.querySelector('#dday-notification-list');
+    const upcomingList = document.querySelector('#upcoming-events');
     notification.hidden = true;
-    list.replaceChildren();
+    ddayList.replaceChildren();
     try {
         const { events } = await createCalendarClient(user.id).load();
         const today = dateKey();
-        // 계정마다 마지막으로 닫은 날짜만 보관해 다른 계정과 다음 날 알림에 영향을 주지 않습니다.
-        ddayDismissal = { key: `endpoint:dday-dismissed:${user.id}`, date: today };
-        try {
-            if (window.localStorage.getItem(ddayDismissal.key) === today) return;
-        } catch {
-            // 브라우저 저장소를 사용할 수 없어도 오늘의 일정은 표시합니다.
+        const now = new Date();
+        const time = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+        const next = upcomingCalendarEvents(events, today, time, 4);
+        upcomingList.replaceChildren();
+        if (!next.length) {
+            const empty = document.createElement('li');
+            empty.className = 'upcoming-empty';
+            empty.textContent = '다가오는 일정이 없습니다. 캘린더에서 첫 일정을 기록해 보세요.';
+            upcomingList.append(empty);
         }
-        const todayEvents = todaysDdayEvents(events, today);
-        for (const event of todayEvents) {
-            const item = document.createElement("li");
-            const title = document.createElement("strong");
+        for (const event of next) {
+            const item = document.createElement('li');
+            item.className = 'upcoming-item';
+            const badge = document.createElement('span');
+            badge.className = 'upcoming-date-badge';
+            const days = Math.round((Date.parse(`${event.date}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86400000);
+            badge.textContent = days <= 0 ? '오늘' : `D-${days}`;
+            const info = document.createElement('div');
+            info.className = 'upcoming-item-copy';
+            const title = document.createElement('strong');
             title.textContent = event.title;
-            const period = document.createElement("span");
-            period.textContent = eventPeriod(event);
-            item.append(title, period);
-            list.append(item);
+            const date = document.createElement('span');
+            date.textContent = `${event.date.slice(5).replace('-', '.')} · ${eventPeriod(event)}`;
+            info.append(title, date);
+            item.append(badge, info);
+            upcomingList.append(item);
         }
-        notification.hidden = todayEvents.length === 0;
+        // Persist dismissals only for the popup, never for the upcoming list.
+        ddayDismissal = { key: `endpoint:dday-dismissed:${user.id}`, date: today };
+        let dismissed = false;
+        try { dismissed = window.localStorage.getItem(ddayDismissal.key) === today; } catch {}
+        if (!dismissed) {
+            const todayEvents = todaysDdayEvents(events, today);
+            for (const event of todayEvents) {
+                const item = document.createElement('li');
+                const title = document.createElement('strong');
+                title.textContent = event.title;
+                const period = document.createElement('span');
+                period.textContent = `${eventPeriod(event)} ${ddayLabel(event, today)}`;
+                item.append(title, period);
+                ddayList.append(item);
+            }
+            notification.hidden = todayEvents.length === 0;
+        }
     } catch (error) {
         if (error.status === 401) {
-            window.location.replace("/login.html");
+            window.location.replace('/login.html');
             return;
         }
-        document.querySelector("#dday-message").textContent =
-            `디데이 알림을 불러오지 못했습니다. ${error.message} 새로고침해 주세요.`;
+        upcomingList.replaceChildren();
+        const item = document.createElement('li');
+        item.className = 'upcoming-empty';
+        item.textContent = '일정을 불러오지 못했습니다. 새로고침해 주세요.';
+        upcomingList.append(item);
+        document.querySelector('#dday-message').textContent = `디데이 알림을 불러오지 못했습니다. ${error.message}`;
     }
 }
 
@@ -179,7 +211,7 @@ function renderCourses(courseList) {
         const row = document.createElement("tr");
         const cell = document.createElement("td");
 
-        cell.colSpan = 6;
+        cell.colSpan = 7;
         cell.className = "empty-message";
         cell.textContent = elements.courseSemesterFilter.value
             ? "선택한 학기에 등록된 과목이 없습니다."
@@ -196,6 +228,7 @@ function renderCourses(courseList) {
 
         const values = [
             course.courseName ?? "-",
+            course.category === "major" ? "전공" : course.category === "general" ? "교양" : "-",
             course.credits ?? "-",
             course.grade || "-",
             formatSemester(course.semester),
@@ -206,9 +239,11 @@ function renderCourses(courseList) {
                     : "-"
         ];
 
-        values.forEach(value => {
+        values.forEach((value, index) => {
             const cell = document.createElement("td");
             cell.textContent = String(value);
+            if (index === 1) cell.className = "course-category";
+            if (index === 5) cell.className = course.status === "completed" ? "course-status is-completed" : "course-status is-progress";
             row.appendChild(cell);
         });
 
@@ -398,6 +433,17 @@ function refreshDashboard() {
 
     elements.graduationMajorRequirement.textContent =
         `학점 · 전공 졸업 기준 ${formatNumber(academicRequirements.graduation.majorCredits)}학점`;
+
+    // UI-only progress indicator: based on actual earned credits, not projected enrollment.
+    const totalRequiredCredits = academicRequirements.graduation.totalCredits;
+    const graduationRate = totalRequiredCredits > 0
+        ? Math.max(0, Math.min(100, earnedCredits / totalRequiredCredits * 100)) : 0;
+    const progress = document.querySelector("#graduation-progress");
+    if (progress) progress.value = graduationRate;
+    const progressLabel = document.querySelector("#graduation-progress-label");
+    if (progressLabel) progressLabel.textContent = `${graduationRate.toFixed(1)}%`;
+    const fraction = document.querySelector("#graduation-progress-fraction");
+    if (fraction) fraction.textContent = `${formatNumber(earnedCredits)} / ${formatNumber(totalRequiredCredits)}학점`;
 
     refreshCourseSemesterFilter();
     renderFilteredCourses();
@@ -655,7 +701,7 @@ async function initDashboard() {
 
         if (!user) return;
 
-        await Promise.all([renderDashboard(user), loadDdayNotification(user)]);
+        await Promise.all([renderDashboard(user), loadCalendarSummary(user)]);
     } catch (error) {
         elements.message.textContent =
             `대시보드 초기화 실패: ${error.message}`;

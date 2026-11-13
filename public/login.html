@@ -1,46 +1,47 @@
-<!doctype html>
+<!DOCTYPE html>
+
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>로그인 | ENDPoinT Team 07</title>
-  <link rel="stylesheet" href="/css/auth.css">
-  <script type="module" src="/js/auth/login.js"></script>
-</head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1" name="viewport"/>
+<title>로그인 | ENDPoinT Team 07</title>
+<link href="/css/auth.css" rel="stylesheet"/>
+<script src="/js/auth/login.js" type="module"></script>
+<link href="/css/auth-redesign.css" rel="stylesheet"/></head>
 <body>
-  <main class="card">
-    <p class="brand">ENDPoinT · TEAM 07</p>
-    <!-- 로그인·회원가입 모드에 따라 필요한 입력 항목을 전환합니다. -->
-    <section id="guest">
-      <h1 id="title">로그인</h1>
-      <p class="description" id="description">계정으로 로그인해 주세요.</p>
-      <form id="auth-form">
-        <div id="name-field" hidden>
-          <label for="name">이름</label>
-          <input id="name" name="name" autocomplete="name" maxlength="50" disabled>
-        </div>
-        <label for="email">이메일</label>
-        <input id="email" name="email" type="email" autocomplete="username" maxlength="254" required>
-        <label for="password">비밀번호</label>
-        <input id="password" name="password" type="password" autocomplete="current-password" minlength="15" maxlength="128" required aria-describedby="password-hint">
-        <p class="hint" id="password-hint">15~128자. 기억하기 쉬운 긴 문장도 사용할 수 있어요.</p>
-        <div id="confirm-field" hidden>
-          <label for="confirm">비밀번호 확인</label>
-          <input id="confirm" name="confirm" type="password" autocomplete="new-password" minlength="15" maxlength="128" disabled>
-        </div>
-        <button id="submit" type="submit" disabled>로그인 상태 확인 중…</button>
-      </form>
-      <button id="switch-mode" class="secondary" type="button">계정이 없나요? 회원가입</button>
-    </section>
-    <section id="account" hidden>
-      <h1>로그인 완료</h1>
-      <p id="welcome"></p>
-      <p class="description">로그인 상태는 새로고침 후에도 유지됩니다.</p>
-      <button id="logout" type="button">로그아웃</button>
-    </section>
-    <!-- 인증 처리 결과와 오류를 표시하고 스크린 리더에도 알립니다. -->
-    <p id="message" role="status" aria-live="polite"></p>
-    <noscript>로그인하려면 브라우저에서 JavaScript를 활성화해 주세요.</noscript>
-  </main>
-</body>
+
+<div class="auth-layout"><aside aria-label="ENDPoinT 소개" class="auth-showcase"><a class="auth-logo" href="/login.html">ENDPoinT</a><div class="auth-showcase-content"><p class="auth-overline">YOUR ACADEMIC COMPANION</p><h2>흩어져 있던 학업을,<br/>하나의 흐름으로.</h2><p class="auth-lead">성적부터 졸업, 매일의 일정까지.<br/>대학 생활의 다음 목표를 ENDPoinT에서 시작하세요.</p><div class="hero-sample"><p class="hero-sample-title">나의 목표까지, 한 걸음 더</p><p class="hero-sample-label">학업 현황을 한눈에 확인하는 대시보드</p><div class="hero-sample-value">성적 <strong>·</strong> 학점 <strong>·</strong> 일정</div><div aria-hidden="true" class="hero-sample-bar"><span></span></div><p class="hero-sample-foot">실제 학업 정보는 로그인 후 확인할 수 있어요.</p></div></div><p class="auth-showcase-footer">차곡차곡 쌓이는, 나만의 대학 생활.</p></aside><div class="auth-stage"><span class="auth-stage-help">ENDPoinT와 함께 학업을 관리하세요.</span><main class="card">
+
+<!-- 로그인·회원가입 모드에 따라 필요한 입력 항목을 전환합니다. -->
+<section id="guest">
+<h1 id="title">다시 만나 반가워요</h1>
+<p class="description" id="description">오늘도 한 걸음, 목표에 가까워질 시간이에요.</p>
+<form id="auth-form">
+<div hidden="" id="name-field">
+<label for="name">이름</label>
+<input autocomplete="name" disabled="" id="name" maxlength="50" name="name"/>
+</div>
+<label for="email">이메일</label>
+<input autocomplete="username" id="email" maxlength="254" name="email" required="" type="email"/>
+<label for="password">비밀번호</label>
+<input aria-describedby="password-hint" autocomplete="current-password" id="password" maxlength="128" minlength="15" name="password" required="" type="password"/>
+<p class="hint" id="password-hint">15~128자. 기억하기 쉬운 긴 문장도 사용할 수 있어요.</p>
+<div hidden="" id="confirm-field">
+<label for="confirm">비밀번호 확인</label>
+<input autocomplete="new-password" disabled="" id="confirm" maxlength="128" minlength="15" name="confirm" type="password"/>
+</div>
+<button disabled="" id="submit" type="submit">로그인 상태 확인 중…</button>
+</form>
+<button class="secondary" id="switch-mode" type="button">아직 ENDPoinT 계정이 없으신가요? 회원가입</button>
+</section>
+<section hidden="" id="account">
+<h1>로그인 완료</h1>
+<p id="welcome"></p>
+<p class="description">로그인 상태는 새로고침 후에도 유지됩니다.</p>
+<button id="logout" type="button">로그아웃</button>
+</section>
+<!-- 인증 처리 결과와 오류를 표시하고 스크린 리더에도 알립니다. -->
+<p aria-live="polite" id="message" role="status"></p>
+<noscript>로그인하려면 브라우저에서 JavaScript를 활성화해 주세요.</noscript>
+</main><p class="auth-copyright">© 2026 ENDPoinT. All rights reserved.</p></div></div></body>
 </html>

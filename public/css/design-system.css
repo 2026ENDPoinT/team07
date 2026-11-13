@@ -1,0 +1,504 @@
+/* ENDPoinT visual redesign — Figma desktop + element kit, November 2026.
+   Presentation layer only; server endpoints, authentication and state schema unchanged. */
+:root {
+  color-scheme: light;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --background: #f6f8fc;
+  --surface: #fff;
+  --text: #17243b;
+  --text-secondary: #63718a;
+  --border: #e6ebf2;
+  --shadow: 0 5px 26px rgba(36,55,92,.035);
+  --blue-soft: #e9f1ff;
+  --danger: #c74762;
+  --radius-card: 17px;
+  --radius-control: 10px;
+  font-synthesis: none;
+}
+* {box-sizing:border-box}
+[hidden] {display:none!important}
+html {scroll-behavior:smooth}
+body {
+  margin:0;
+  font-family: Pretendard,"Noto Sans KR",Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--background);
+  color:var(--text);
+  font-size:14px;
+  -webkit-font-smoothing:antialiased;
+}
+a {color:inherit;text-decoration:none}
+button,input,select,textarea {font:inherit}
+button,select {cursor:pointer}
+button:disabled,select:disabled {cursor:default}
+:where(button,a,input,select,textarea):focus-visible {outline:3px solid rgba(37,99,235,.5);outline-offset:3px}
+
+/* Shared, slim navigation from all supplied Figma desktop screens. */
+.topbar {
+  min-height:72px;height:auto;padding:0 max(28px,calc((100% - 1376px)/2));
+  display:flex;align-items:center;justify-content:space-between;gap:28px;
+  background:#fff;color:var(--text);border-bottom:1px solid var(--border);
+  box-shadow:0 1px 1px rgba(23,36,59,.018);
+}
+.logo {display:flex;align-items:center;gap:0;flex-shrink:0;color:var(--primary);font-size:22px;font-weight:850;letter-spacing:-.9px}
+.logo-icon {display:none}
+.primary-nav {align-self:stretch;display:flex;align-items:stretch;justify-content:center;gap:36px;min-width:0}
+.primary-nav a {
+  display:flex;align-items:center;justify-content:center;white-space:nowrap;
+  border-bottom:3px solid transparent;padding:3px 2px 0;
+  font-size:13px;font-weight:600;color:#7b8596;transition:color .18s,border-color .18s;
+}
+.primary-nav a:hover {color:var(--primary)}
+.primary-nav a[aria-current="page"] {color:var(--primary);border-color:var(--primary);font-weight:750}
+.user-area {display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:nowrap;font-size:12px;min-width:0}
+#user-name {max-width:180px;font-weight:700;color:var(--text);overflow-wrap:anywhere}
+.logout-button {
+  padding:9px 11px;border:1px solid transparent;background:transparent;
+  border-radius:9px;color:var(--text-secondary);font-size:12px;white-space:nowrap;
+  box-shadow:none;
+}
+.logout-button:hover {background:var(--background);color:var(--primary)}
+.user-area a.logout-button[aria-current="page"] {color:var(--primary);background:var(--blue-soft)}
+
+.main-content {width:min(1250px,calc(100% - 64px));margin:45px auto 75px}
+.welcome-section {display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin:0 0 30px}
+.welcome-section h1 {font-size:30px;line-height:1.28;font-weight:800;letter-spacing:-1.15px}
+.welcome-section .eyebrow {margin-bottom:10px;font-size:10px;letter-spacing:1.45px}
+.welcome-section .subtitle {margin:9px 0 0;color:var(--text-secondary);font-size:13px;line-height:1.75}
+#data-source {font-size:12px;opacity:.87}
+h2 {letter-spacing:-.45px}
+section h2 {font-size:18px;font-weight:800;margin-bottom:16px}
+.academic-year-setting {
+  justify-content:flex-start;align-items:center;gap:9px;margin:18px 0 0;
+  font-size:12px;
+}
+.academic-year-setting label {font-weight:700;color:var(--text-secondary)}
+.academic-year-setting select,.course-filter-bar select,.gpa-semester-select {
+  padding:10px 34px 10px 13px;color:var(--text);border:1px solid var(--border);
+  border-radius:var(--radius-control);background-color:white;font-size:12px;font-weight:650;
+}
+.academic-year-setting p {flex-basis:100%;max-width:520px;margin:0;color:var(--text-secondary);font-size:11px}
+
+/* Metric cards */
+.summary-section > h2 {font-size:0;height:0;margin:0;overflow:hidden}
+.summary-grid {grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.summary-card {
+  padding:25px 26px;min-height:160px;border:1px solid var(--border);
+  border-radius:var(--radius-card);background:#fff;box-shadow:var(--shadow);
+}
+.summary-card.highlight-metric {background:var(--blue-soft);border-color:#dce8fc}
+.card-heading {font-size:12px;font-weight:600;color:var(--text-secondary)}
+.card-icon {display:none}
+.summary-card strong {font-size:36px;line-height:1.2;font-weight:800;letter-spacing:-1.2px;margin-top:17px;font-variant-numeric:tabular-nums}
+.highlight-metric strong {color:var(--primary)}
+.summary-card p {margin-top:8px;font-size:11px;line-height:1.5}
+
+/* Graduation progress uses existing academic data; predicted remaining is kept distinct. */
+.graduation-section {
+  margin:20px 0 0;padding:28px 30px;display:grid;
+  grid-template-columns:1.2fr 1fr;gap:30px;align-items:stretch;
+  background:#fff;border:1px solid var(--border);border-radius:var(--radius-card);
+  box-shadow:var(--shadow);
+}
+.graduation-intro {min-width:0}
+.graduation-intro h2 {margin:0 0 15px;font-size:18px}
+.graduation-heading {margin-bottom:12px}
+.progress-figures {display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:0 0 14px}
+.progress-percent {font-size:31px;color:var(--primary);font-weight:850;letter-spacing:-1px}
+.progress-fraction {font-size:12px;color:var(--text-secondary)}
+#graduation-progress {
+  appearance:none;-webkit-appearance:none;display:block;width:100%;height:9px;
+  overflow:hidden;border-radius:100px;border:0;background:#ecf0f7;
+}
+#graduation-progress::-webkit-progress-bar {background:#ecf0f7;border-radius:100px}
+#graduation-progress::-webkit-progress-value {background:var(--primary);border-radius:100px}
+#graduation-progress::-moz-progress-bar {background:var(--primary);border-radius:100px}
+.graduation-caption {margin:11px 0 0;color:var(--text-secondary);font-size:11px;line-height:1.7}
+#graduation-note {margin:8px 0 0;font-size:11px;line-height:1.65;color:var(--text-secondary)}
+.graduation-summary {
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0;
+  border-left:1px solid var(--border);padding-left:29px;
+}
+.graduation-summary .summary-card {min-height:auto;padding:14px 20px;border:0;box-shadow:none;border-radius:0}
+.graduation-summary .summary-card:first-child {border-right:1px solid var(--border)}
+.graduation-summary .summary-card strong {font-size:30px;margin-top:14px}
+.graduation-summary .summary-card p {max-width:160px;font-size:11px;line-height:1.55}
+
+/* Courses and Figma upcoming-event panel. */
+.dashboard-lower {display:grid;grid-template-columns:minmax(0,2.15fr) minmax(240px,.9fr);align-items:start;gap:20px;margin-top:20px}
+.dashboard-lower .course-section,.dashboard-lower .menu-section {min-width:0;margin:0}
+.course-section,.menu-section {padding:25px 25px 22px;background:white;border:1px solid var(--border);border-radius:var(--radius-card);box-shadow:var(--shadow)}
+.section-heading {align-items:start;gap:12px}
+.section-heading h2 {font-size:18px;margin:0 0 4px}
+.section-heading p {font-size:12px;margin:0;color:var(--text-secondary);line-height:1.55}
+.course-filter-bar {display:flex;flex-wrap:wrap;gap:11px;margin:22px 0 14px;font-size:12px}
+.course-filter-bar label {font-weight:650;color:var(--text-secondary)}
+.course-filter-bar p {margin-left:auto;font-size:12px;color:var(--text-secondary)}
+.primary-button,.secondary-button,.delete-button {
+  border-radius:var(--radius-control);padding:10px 15px;font-weight:700;font-size:12px;
+  background:white;color:var(--text);border:1px solid var(--border);box-shadow:none;
+  transition:background-color .18s,border-color .18s,transform .18s;
+}
+.primary-button {background:var(--primary);border-color:var(--primary);color:white}
+.primary-button:hover:not(:disabled) {background:var(--primary-dark);border-color:var(--primary-dark);transform:translateY(-1px)}
+.secondary-button:hover:not(:disabled) {background:var(--background);border-color:#d4dfef}
+.delete-button {background:#fff4f6;color:var(--danger);border-color:#ffe4e9}
+.delete-button:hover {background:#ffe9ee}
+.table-wrapper {border:0;border-radius:0;overflow-x:auto}
+.table-wrapper table {width:100%}
+th,td {padding:14px 12px;border-bottom:1px solid #eef1f6;font-size:11.5px}
+th {color:var(--text-secondary);font-size:11px;font-weight:700;background:var(--background)}
+.table-wrapper th:first-child,.table-wrapper td:first-child {padding-left:13px}
+.table-wrapper th:last-child,.table-wrapper td:last-child {padding-right:13px}
+.table-wrapper tbody tr:hover {background:#f9fbff}
+.table-wrapper tbody td:first-child {font-weight:700}
+.table-wrapper tbody td.course-status {color:var(--primary);font-size:11px;font-weight:700}
+.table-wrapper tbody td.course-status.is-completed {color:#208770}
+.table-wrapper td.course-category {color:var(--text-secondary)}
+.course-actions {display:flex;align-items:center;gap:4px}
+.course-actions button {font-size:11px;padding:5px 7px;border:0;background:transparent}
+.course-actions .secondary-button {color:var(--text-secondary)}
+.course-actions .delete-button {color:var(--danger)}
+.course-actions button:hover {background:var(--background)}
+.course-form {margin:19px 0;padding:25px;border-radius:14px;border:1px solid var(--border);box-shadow:0 10px 28px rgba(23,36,59,.04);background:#fff}
+.course-form h3 {font-size:18px;margin-bottom:19px}
+.course-form-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+.course-form-grid label {font-size:12px;font-weight:650;color:var(--text)}
+.course-form-grid input,.course-form-grid select,
+.graph-section input,.graph-section select {
+  width:100%;padding:12px;border:1px solid #dce3ee;border-radius:10px;
+  font-size:12px;background:#fff;color:var(--text);
+}
+.course-form-grid input:focus,.course-form-grid select:focus,
+.graph-section input:focus,.graph-section select:focus {border-color:var(--primary);outline:2px solid #b8cffd;outline-offset:0}
+.course-form .checkbox-label {margin:16px 0 12px}
+.course-form .checkbox-label input {accent-color:var(--primary)}
+.course-form > .form-actions {justify-content:flex-end;flex-direction:row-reverse}
+.menu-section h2 {margin:0 0 16px}
+.menu-grid {display:grid;grid-template-columns:1fr;gap:12px}
+.menu-card {min-height:94px;padding:16px;gap:12px;box-shadow:none;border-color:var(--border);border-radius:12px}
+.menu-card:hover {border-color:#cadbfa;background:#fbfdff}
+.menu-icon {background:var(--blue-soft);color:var(--primary);font-size:20px;width:41px;height:41px}
+.menu-card h3 {font-size:13px}
+.menu-card p {margin-top:5px;font-size:11px;line-height:1.5}
+.menu-arrow {color:var(--primary);font-size:17px}
+.dashboard-message,.course-message {font-size:12px;line-height:1.7}
+.dday-notification {border-color:#f1cbd2;background:#fff7f8;border-radius:15px}
+.dday-notification h2 {color:#ab4057}
+.dday-notification a {color:var(--primary)}
+.footer {padding:26px;text-align:center;font-size:11px;color:#97a1b1}
+
+/* Existing course deletion, event deletion & profile editing dialogs. */
+.course-dialog,.event-dialog {border:1px solid var(--border);border-radius:18px;box-shadow:0 24px 90px rgba(23,36,59,.22);background:#fff;padding:28px;color:var(--text)}
+.course-dialog::backdrop,.event-dialog::backdrop {background:rgba(19,32,55,.48);backdrop-filter:blur(2px)}
+.course-dialog h2,.event-dialog h2 {font-size:20px;font-weight:800}
+.course-dialog .form-actions {margin-top:22px}
+
+/* Analysis page retains existing grade-range forecasting controls (PDF does not show them). */
+.analysis-navigation {display:none}
+.analysis-summary {grid-template-columns:repeat(3,minmax(0,1fr));gap:0;border:1px solid var(--border);border-radius:16px;background:#fff;overflow:hidden}
+.analysis-summary .summary-card {border:0;border-radius:0;box-shadow:none;min-height:165px;position:relative}
+.analysis-summary .summary-card:not(:last-child)::after {content:"";position:absolute;top:32px;bottom:32px;right:0;width:1px;background:var(--border)}
+.analysis-summary .summary-card:first-child strong {color:var(--primary)}
+.analysis-summary .summary-card strong {font-size:32px}
+.gpa-semester-select {margin-top:9px;padding:6px 11px;font-size:12px}
+.graph-section {
+  margin-top:20px;padding:26px 29px;border-radius:var(--radius-card);
+  background:white;box-shadow:var(--shadow);border:1px solid var(--border);overflow-x:auto;
+}
+.graph-section > .subtitle {font-size:12px;line-height:1.7;margin:0 0 20px}
+.graph-section #grade-dashboard > section > h2 {margin-top:17px;font-size:18px}
+.graph-section #grade-dashboard > section > h2:first-child {margin-top:0}
+.graph-section label {color:var(--text-secondary);font-weight:650;font-size:12px}
+.graph-section input {max-width:110px}
+.graph-section label input {margin-left:6px}
+.graph-section select {width:auto;min-width:100px;margin-left:8px}
+.graph-section [role="status"] {color:var(--danger)}
+.graph-section .grade-range-bar-chart {margin-top:20px}
+.graph-section table {margin-top:16px}
+.graph-section td,.graph-section th {font-size:12px}
+
+/* Calendar: existing real monthly + selected-day functionality styled after supplied Figma month screen. */
+.calendar-page .analysis-navigation {display:none}
+.calendar-page .welcome-section {margin-bottom:24px}
+.calendar-actions {margin:0 0 18px;gap:15px}
+.calendar-actions .subtitle {font-size:12px;color:var(--text-secondary)}
+.calendar-layout {display:grid;grid-template-columns:minmax(0,2.6fr) minmax(290px,1fr);gap:19px;align-items:stretch}
+.calendar-panel,.agenda-panel {padding:23px 23px 26px;border:1px solid var(--border);border-radius:var(--radius-card);background:white;box-shadow:var(--shadow)}
+.calendar-section-kicker {margin:0 0 22px;color:var(--text);font-size:14px;font-weight:800}
+.calendar-toolbar {margin-bottom:21px;align-items:center;gap:10px}
+.calendar-toolbar h2 {font-size:19px}
+.calendar-period-picker select {font-weight:800;border-radius:9px;font-size:16px;background:white}
+.calendar-period-picker select:hover {background:var(--background)}
+.calendar-toolbar .form-actions {gap:6px}
+.calendar-toolbar .secondary-button {padding:8px 12px}
+.calendar-weekdays {padding:12px 0;color:var(--text-secondary);font-weight:700;font-size:11px}
+.calendar-weekdays span:first-child {color:#c45770}
+.calendar-weekdays span:last-child {color:var(--primary)}
+.calendar-days {border-left:1px solid var(--border);border-top:1px solid var(--border);border-radius:2px;overflow:hidden}
+.calendar-day {min-height:118px;padding:9px 8px;gap:6px;transition:background .15s;border-color:var(--border)}
+.calendar-day:hover {background:#f7faff}
+.calendar-day.outside-month {background:#fbfcff;color:#a9b2c0}
+.calendar-day[aria-pressed="true"] {background:#eef4ff;box-shadow:inset 0 0 0 1.5px #b5ceff}
+.calendar-day[aria-current="date"] .day-number {background:var(--primary);color:white}
+.day-number {font-size:11px;width:25px;height:25px}
+.day-event {background:#eaf1ff;color:#225bc3;border-radius:5px;padding:4px 5px;font-size:10px;font-weight:600}
+.day-event-dday {background:#fff0f2;color:#be4760}
+.day-more {font-size:10px}
+.calendar-hint {font-size:11px;margin-top:15px}
+.agenda-panel .eyebrow {font-size:11px;letter-spacing:0;color:var(--text-secondary)}
+.agenda-panel h2 {font-size:20px;margin-top:8px}
+.agenda-panel .subtitle {font-size:12px}
+.event-list {margin-top:18px}
+.event-card {padding:17px 0}
+.event-card h3 {font-size:14px;margin:8px 0;line-height:1.5}
+.event-card .event-time {font-size:12px;color:var(--primary);font-weight:750}
+.event-card .event-notes {color:var(--text-secondary);font-size:12px}
+.event-card .form-actions {gap:5px}
+.event-card .form-actions button {font-size:11px;padding:6px 10px}
+.dday-badge {background:#fff0f2;color:#b6425c;border-radius:5px}
+.event-empty {font-size:12px;line-height:1.85}
+.event-dialog {max-width:565px;width:calc(100% - 32px);max-height:calc(100dvh - 36px)}
+.event-dialog label {font-size:12px;font-weight:750;margin-top:16px}
+.event-dialog input,.event-dialog textarea {padding:12px;border-color:#dce3ed;border-radius:10px}
+.event-dialog .form-hint {font-size:11px;line-height:1.7}
+.event-dialog .dday-setting {font-size:12px}
+
+/* User profile: unpictured in PDF, so inherit same forms/cards instead of hiding the feature. */
+.mypage .analysis-navigation {display:none}
+.mypage .main-content {max-width:940px}
+.profile-card {padding:35px 38px;border-radius:var(--radius-card);box-shadow:var(--shadow)}
+.profile-card legend {font-size:20px;font-weight:800}
+.profile-field input,.major-name {padding:13px 15px;border-radius:10px;border-color:#dae2ed}
+.profile-field label {font-size:12px}
+.major-toggle {font-size:12px}
+.mypage .profile-actions .primary-button {min-width:135px}
+.profile-message {font-size:12px;color:var(--primary)}
+
+@media (max-width:1199px) {
+  .topbar {padding:0 24px;gap:14px}
+  .primary-nav {gap:18px}
+  .main-content {width:calc(100% - 48px);margin-top:38px}
+  .dashboard-lower {grid-template-columns:minmax(0,1fr) 260px}
+  .summary-card {padding:21px}
+  .summary-card strong {font-size:31px}
+  .graduation-section {grid-template-columns:1fr;gap:16px}
+  .graduation-summary {border-left:0;border-top:1px solid var(--border);padding-left:0;padding-top:12px}
+  .calendar-layout {grid-template-columns:minmax(0,2fr) minmax(260px,1fr)}
+}
+@media (max-width:900px) {
+  .topbar {flex-wrap:wrap;justify-content:space-between;padding:13px 24px;gap:9px 18px}
+  .primary-nav {order:3;flex-basis:100%;justify-content:flex-start;gap:25px;overflow-x:auto;min-height:42px}
+  .primary-nav a {font-size:13px}
+  .summary-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dashboard-lower {grid-template-columns:1fr}
+  .menu-grid {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .calendar-layout {grid-template-columns:1fr}
+  .calendar-day {min-height:100px}
+}
+@media (max-width:600px) {
+  .topbar,.analysis-page .topbar,.calendar-page .topbar {padding:12px 16px;min-height:0;height:auto;gap:8px 14px}
+  .logo {font-size:20px}
+  .user-area {gap:6px;font-size:11px}
+  .user-area .logout-button {padding:7px 5px;font-size:11px}
+  #user-name {max-width:105px;font-size:11px}
+  .primary-nav {gap:22px;margin:0 -16px;padding:0 16px;min-height:38px}
+  .primary-nav a {font-size:12px;padding-top:1px}
+  .main-content,.analysis-page .main-content,.calendar-page .main-content,.mypage .main-content {width:calc(100% - 28px);margin:25px auto 44px}
+  .welcome-section {margin-bottom:25px}
+  .welcome-section h1 {font-size:24px}
+  .welcome-section .subtitle {font-size:12px}
+  .academic-year-setting {margin-top:13px}
+  .summary-grid {gap:10px}
+  .summary-card {min-height:133px;padding:18px;border-radius:13px}
+  .summary-card strong {font-size:28px}
+  .summary-card .card-heading {font-size:11px}
+  .graduation-section {padding:21px 19px;gap:16px;border-radius:14px}
+  .graduation-intro h2 {font-size:16px}
+  .progress-percent {font-size:27px}
+  .graduation-summary {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .graduation-summary .summary-card {padding:12px 9px;min-height:110px}
+  .graduation-summary .summary-card strong {font-size:26px}
+  .dashboard-lower {gap:13px;margin-top:14px}
+  .course-section,.menu-section {padding:21px 15px}
+  .menu-grid {grid-template-columns:1fr}
+  .section-heading {align-items:flex-start;gap:8px}
+  .section-heading h2 {font-size:16px}
+  .section-heading p {margin-top:5px;font-size:11px}
+  .course-filter-bar {margin:15px 0 12px}
+  .course-form {padding:18px}
+  .course-form-grid {grid-template-columns:1fr}
+  .table-wrapper {margin:0 -2px}
+  th,td {padding:13px 10px;font-size:11px}
+  .analysis-summary {display:grid;grid-template-columns:1fr 1fr}
+  .analysis-summary .summary-card {min-height:130px;padding:19px}
+  .analysis-summary .summary-card:first-child {grid-column:1/-1;border-bottom:1px solid var(--border)}
+  .analysis-summary .summary-card:first-child::after {display:none}
+  .analysis-summary .summary-card strong {font-size:27px}
+  .analysis-page .graph-section {padding:18px 15px;margin-top:15px}
+  .graph-section #grade-dashboard > section > h2 {font-size:16px}
+  .calendar-panel,.agenda-panel {padding:17px 13px}
+  .calendar-section-kicker {margin-bottom:14px}
+  .calendar-day {min-height:76px;padding:6px 3px;gap:4px}
+  .day-event {font-size:9px;padding:3px 2px}
+  .day-number {width:22px;height:22px;font-size:10px}
+  .calendar-toolbar h2 {font-size:15px}
+  .calendar-period-picker select {font-size:14px;max-width:84px}
+  .calendar-toolbar .secondary-button {padding:7px 9px}
+  .event-dialog {padding:21px}
+  .event-date-time {grid-template-columns:1fr}
+  .profile-card {padding:21px 16px}
+  .profile-grid {grid-template-columns:1fr;gap:18px}
+  .major-option {grid-template-columns:1fr;gap:8px}
+  .course-dialog {padding:22px}
+}
+@media (prefers-reduced-motion:reduce) {html {scroll-behavior:auto} * {animation-duration:0.01ms!important;transition-duration:0.01ms!important}}
+
+/* Figma extension: live upcoming calendar events on the academic dashboard. */
+.dashboard-side {display:grid;grid-template-columns:minmax(0,1fr);gap:16px;min-width:0}
+.dashboard-side .menu-section {margin:0;min-width:0}
+.upcoming-panel {padding:25px 23px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-card);box-shadow:var(--shadow);min-width:0}
+.upcoming-heading {display:flex;align-items:start;justify-content:space-between;gap:9px;margin-bottom:17px}
+.upcoming-heading h2 {font-size:17px;margin:0 0 6px}
+.upcoming-heading p {color:var(--text-secondary);font-size:11px;line-height:1.6;margin:0}
+.upcoming-heading a {color:var(--primary);white-space:nowrap;font-size:11px;font-weight:700;padding-top:5px}
+.upcoming-heading a:hover {text-decoration:underline}
+.upcoming-events {list-style:none;margin:0;padding:0}
+.upcoming-item {display:flex;align-items:flex-start;gap:12px;border-top:1px solid #f0f3f7;padding:16px 0;min-width:0}
+.upcoming-item:first-child {border-top:0;padding-top:5px}
+.upcoming-date-badge {flex:0 0 45px;display:inline-grid;place-items:center;min-height:29px;padding:4px 6px;border-radius:7px;background:#edf3ff;color:#1d55c3;font-weight:750;font-size:11px;white-space:nowrap}
+.upcoming-item:first-child .upcoming-date-badge {background:#fef0f2;color:#b3405a}
+.upcoming-item-copy {min-width:0;display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere}
+.upcoming-item-copy strong {font-size:12px;font-weight:750;line-height:1.5}
+.upcoming-item-copy span {font-size:11px;color:var(--text-secondary);line-height:1.5}
+.upcoming-empty {color:var(--text-secondary);font-size:12px;line-height:1.85;padding:13px 0}
+
+/* Figma desktop 5/7/8: compact side calendar and unified month/week/list stage. */
+.calendar-workspace {display:grid;grid-template-columns:190px minmax(0,1fr);gap:20px;align-items:start}
+.calendar-sidebar {min-width:0}
+.mini-month-panel {background:#fff;border:1px solid var(--border);border-radius:var(--radius-card);box-shadow:var(--shadow);padding:17px 13px 23px}
+.mini-month-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:18px}
+.mini-month-heading h2 {font-size:13px;margin:0;font-weight:800}
+#mini-month-count {font-size:10px;color:var(--text-secondary)}
+.mini-weekdays,.mini-days {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));text-align:center;gap:2px}
+.mini-weekdays {font-size:10px;color:var(--text-secondary);margin-bottom:8px}
+.mini-day {position:relative;min-width:0;min-height:24px;border:0;background:transparent;color:var(--text);font-size:10px;padding:0;border-radius:50%;cursor:pointer}
+.mini-day.outside-month {color:#c2cbd8}
+.mini-day:not(.mini-day-empty):hover {background:#eaf1ff}
+.mini-day[aria-pressed="true"] {background:var(--primary);color:#fff;font-weight:800}
+.mini-day[aria-current="date"]:not([aria-pressed="true"]) {outline:1.5px solid var(--primary);color:var(--primary);font-weight:800}
+.mini-day.has-events:after {content:"";width:3px;height:3px;background:#4278e9;position:absolute;bottom:2px;left:calc(50% - 1.5px);border-radius:50%}
+.mini-day[aria-pressed="true"]:after {background:#fff}
+.mini-panel-foot {border-top:1px solid var(--border);margin-top:20px;padding-top:14px;color:var(--text-secondary);line-height:1.65;font-size:10px}
+.mini-dot {display:inline-block;vertical-align:middle;width:6px;height:6px;border-radius:50%;margin-right:4px;background:var(--primary)}
+.calendar-sidebar-link {display:inline-block;margin:14px 0 0 6px;font-size:11px;color:var(--text-secondary)}
+.calendar-sidebar-link:hover {color:var(--primary)}
+.calendar-stage {min-width:0;display:grid;gap:16px}
+.calendar-stage>.calendar-panel {min-width:0}
+.calendar-stage>.agenda-panel {padding:24px}
+.calendar-page .calendar-toolbar {display:flex;gap:14px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:20px}
+.calendar-toolbar-title {display:flex;align-items:center;gap:9px;flex:1 0 220px;min-width:0}
+.calendar-page .calendar-section-kicker {display:none}
+.calendar-toolbar h2 {margin:0}
+.calendar-period-actions {display:flex;gap:5px;align-items:center}
+.calendar-period-actions .secondary-button {padding:8px 10px;min-width:33px;font-size:12px}
+.calendar-view-switch {display:flex;gap:2px;padding:4px;background:#eff3f9;border:1px solid #e8edf5;border-radius:9px}
+.view-tab {min-width:49px;border:0;background:transparent;color:var(--text-secondary);padding:7px 11px;border-radius:7px;font-size:11px;cursor:pointer}
+.view-tab[aria-pressed="true"] {background:white;color:var(--primary);font-weight:800;box-shadow:0 1px 6px rgba(23,36,59,.08)}
+.week-period-label {font-weight:800;color:var(--text);font-size:14px;margin:0;line-height:1.5}
+.calendar-page .calendar-panel {padding:24px 19px 19px}
+.calendar-page .calendar-day {min-height:102px}
+.calendar-page .calendar-hint {font-size:11px;margin-bottom:0}
+.agenda-heading {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.agenda-heading h2 {margin:6px 0;font-size:18px}
+.agenda-heading .subtitle {margin:0}
+.agenda-panel .event-list {margin-top:12px}
+.agenda-panel .event-card {display:flex;justify-content:space-between;align-items:center;gap:14px;min-width:0}
+.event-card-info {min-width:0;overflow-wrap:anywhere}
+.event-card .event-actions {flex-shrink:0;flex-wrap:nowrap}
+
+/* Weekly horizontal timetable, with compact selected-day lanes on mobile. */
+.week-day-picker {display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-left:54px;gap:1px;margin-bottom:8px}
+.week-picker-day {border:0;background:transparent;min-width:0;display:flex;align-items:center;flex-direction:column;gap:5px;padding:8px 2px;border-radius:8px;color:var(--text-secondary);cursor:pointer}
+.week-picker-day[aria-pressed="true"] {background:#e9f1ff;color:var(--primary)}
+.week-picker-day.is-today strong {border-radius:50%;background:var(--primary);color:#fff;display:grid;place-items:center;width:25px;height:25px}
+.week-picker-day strong {font-size:12px}
+.week-picker-weekday {font-size:11px}
+.week-hint {font-size:11px;color:var(--text-secondary);margin:0 0 8px}
+.week-scroller {overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:6px}
+.week-board {min-width:670px;width:100%;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.week-all-day,.week-grid {display:grid;grid-template-columns:54px repeat(7,minmax(0,1fr))}
+.week-all-day {border-bottom:1px solid var(--border);min-height:36px}
+.week-all-day-label {font-size:9px;line-height:1.4;color:var(--text-secondary);padding:7px 3px;text-align:center}
+.week-all-day-cell {min-width:0;border-left:1px solid var(--border);padding:4px 3px;display:flex;gap:3px;flex-direction:column}
+.week-all-day-event {display:block;width:100%;padding:5px 4px;border:0;border-radius:5px;background:#eaf1ff;color:#1850b1;text-overflow:ellipsis;white-space:nowrap;overflow:hidden;font-size:10px;text-align:left;cursor:pointer}
+.week-grid {position:relative}
+.week-hour-axis {position:relative;min-height:100px}
+.week-hour-label {position:absolute;right:5px;transform:translateY(-8px);font-size:9px;color:var(--text-secondary);white-space:nowrap}
+.week-day-column {position:relative;min-width:0;border-left:1px solid var(--border);background:repeating-linear-gradient(to bottom,#fff 0px,#fff calc(var(--week-hour-height) - 1px),#e9edf5 calc(var(--week-hour-height) - 1px),#e9edf5 var(--week-hour-height))}
+.week-day-column.week-selected,.week-all-day-cell.week-selected {background-color:#f8fbff}
+.week-time-event {position:absolute;z-index:1;min-width:0;border:1px solid #dce9ff;border-left:3px solid var(--primary);background:#eaf1ff;border-radius:5px;padding:6px 3px;display:flex;flex-direction:column;gap:2px;text-align:left;overflow:hidden;cursor:pointer}
+.week-time-event:hover {background:#d8e7ff;z-index:2}
+.week-time-event strong {font-size:10px;line-height:1.5;font-weight:750;overflow-wrap:anywhere}
+.week-time-event span {font-size:9px;color:#3562a8}
+
+/* Entire account's saved calendar, including past events. */
+.calendar-list-heading {display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding:7px 4px 16px;gap:12px}
+.calendar-list-heading h3 {margin:0;font-size:16px}
+#calendar-total-count {font-size:11px;color:var(--text-secondary)}
+.all-events-group {display:grid;grid-template-columns:100px minmax(0,1fr);gap:20px;align-items:start;padding:19px 0;border-bottom:1px solid var(--border)}
+.all-events-group:last-child {border:0}
+.all-event-date {display:flex;flex-direction:column;gap:4px;align-items:flex-start;padding-left:7px}
+.all-event-date strong {font-size:17px;color:var(--text)}
+.all-event-date span {font-size:11px;color:var(--text-secondary)}
+.all-event-date .list-today-pill {color:var(--primary);font-weight:750}
+.all-event-row {display:flex;gap:16px;align-items:center;justify-content:space-between;min-width:0;padding:12px 12px;border-left:3px solid var(--primary);background:#fbfcff;border-radius:0 8px 8px 0;margin:0 0 11px}
+.all-event-row:last-child {margin-bottom:0}
+.all-event-info {display:flex;flex-direction:column;gap:6px;min-width:0;overflow-wrap:anywhere}
+.all-event-info strong {font-size:13px}
+.all-event-info>span:not(.dday-badge),.all-event-notes {font-size:11px;color:var(--text-secondary)}
+.all-event-notes {margin:0;white-space:pre-wrap;line-height:1.65}
+.all-event-row .event-actions {flex-wrap:nowrap;flex-shrink:0;gap:5px}
+.all-event-row .event-actions button {font-size:11px;padding:7px 9px}
+.list-empty {padding:30px 8px}
+
+@media (max-width:1199px) {
+  .calendar-workspace {grid-template-columns:156px minmax(0,1fr);gap:13px}
+  .calendar-page .calendar-toolbar {gap:10px}
+  .calendar-toolbar-title {flex-basis:180px}
+  .calendar-page .calendar-day {min-height:95px}
+}
+@media (max-width:900px) {
+  .calendar-workspace {grid-template-columns:1fr}
+  .calendar-sidebar {display:none}
+  .calendar-page .calendar-day {min-height:93px}
+}
+@media (max-width:600px) {
+  .upcoming-panel {padding:20px 17px}
+  .upcoming-heading h2 {font-size:16px}
+  .calendar-page .calendar-panel,.calendar-stage>.agenda-panel {padding:18px 12px}
+  .calendar-toolbar-title {flex:1 1 100%;}
+  .calendar-period-actions {order:2}
+  .calendar-view-switch {order:3;margin-left:auto}
+  .calendar-toolbar .view-tab {min-width:44px;padding:7px 8px}
+  .calendar-page .calendar-day {min-height:68px}
+  .calendar-page .day-event {font-size:9px;max-width:100%}
+  .calendar-page .agenda-panel .event-card {align-items:flex-start;flex-direction:column}
+  .all-events-group {grid-template-columns:60px minmax(0,1fr);gap:9px}
+  .all-event-row {padding:10px 9px;flex-direction:column;align-items:flex-start;gap:9px}
+  .all-event-date {padding-left:0}
+  .all-event-date strong {font-size:13px}
+  .all-event-row .event-actions {align-self:flex-end}
+  .week-day-picker {margin:0;gap:2px}
+  .week-picker-day {padding:8px 1px}
+  .week-board {min-width:0}
+  .week-all-day,.week-grid {grid-template-columns:42px minmax(0,1fr)}
+  .week-all-day-cell,.week-day-column {display:none}
+  .week-all-day-cell.week-selected,.week-day-column.week-selected {display:block}
+  .week-hour-axis {min-width:0}
+  .week-hour-label {font-size:9px;right:4px}
+  .week-time-event strong {font-size:11px}
+  .week-time-event span {font-size:10px}
+}
+
+.all-event-group-rows {min-width:0;width:100%}
