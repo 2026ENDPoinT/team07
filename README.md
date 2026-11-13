@@ -35,6 +35,14 @@ ENDPoinT 해커톤 2026 Team 07
 
 ## 실행
 
+## At server
+
+https://team07-fby5.onrender.com/login.html
+
+위의 링크를 통하여 web_page 접속 후 실행
+
+
+##IN Local
 Node.js 24.12.0 이상의 24.x에서 최초 `npm.cmd ci` 후 `npm.cmd start`를 실행하고 [http://localhost:3000/](http://localhost:3000/)에 접속합니다. 로그인 또는 회원가입 후 학업 대시보드로 이동합니다.
 
 **Render 무료 플랜 + Supabase 배포를 지원합니다.** `DATABASE_URL`이 없으면 기존 사용자별 SQLite를, 있으면 Supabase PostgreSQL의 사용자별 데이터를 사용합니다. 과목·학년·동시 수정 방지와 화면 기능은 동일합니다. `render.yaml`과 [배포 안내](SUPABASE-SETUP.md)를 참고하세요. 유료 Render 디스크는 필요하지 않습니다.
