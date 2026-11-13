@@ -4,7 +4,7 @@
 
 ## 실행
 
-Node.js 24.12 이상의 24.x 최신 패치를 설치한 뒤 프로젝트 폴더에서 `npm ci`로 의존성을 설치합니다. 로컬은 Node 내장 HTTP 서버와 SQLite를 사용하고, `DATABASE_URL`이 있으면 `pg`를 통해 PostgreSQL을 사용합니다. Render 무료 플랜·Supabase 설정은 [배포 안내](SUPABASE-SETUP.md)를 참고하세요.
+Node.js 24.12 이상의 지원 중인 버전을 설치한 뒤 프로젝트 폴더에서 실행합니다. 운영에서는 해당 버전 계열의 최신 보안 패치를 사용하세요. 별도 npm 패키지 설치나 DB 서버 설치 없이 Node 내장 HTTP 서버와 SQLite를 사용합니다.
 
 ```powershell
 npm start
@@ -16,8 +16,6 @@ npm start
 
 ## 파일
 
-위의 DB 파일 경로 설명은 `DATABASE_URL`이 없는 로컬 SQLite 모드에 해당합니다. Supabase 모드에서는 인증·과목·학년·저장 버전을 모두 PostgreSQL의 비공개 `app_private` 스키마에 저장하며, 개인 데이터는 세션의 사용자 ID로 분리합니다. 로컬 DB와 Supabase 사이의 자동 이전은 수행하지 않습니다.
-
 - `public/login.html`: 로그인·회원가입·로그인 상태 표시 화면
 - `public/css/auth.css`: 로그인 전용 스타일
 - `public/js/auth/login.js`: 폼 처리
@@ -25,11 +23,9 @@ npm start
 - `server/app.js`: Node HTTP 서버, 인증 API, 세션·출처 검사
 - `server/password.js`: scrypt 비밀번호 해시 및 검증
 - `server/db.js`, `server/schema.sql`: SQLite DB 및 테이블 생성
-- `server/postgres.js`, `server/schema.postgres.sql`: TLS PostgreSQL 연결 및 비공개 스키마 생성
 - `server/academic.js`: 사용자별 DB 선택, 학사 데이터 검증 및 버전 검사
 - `public/js/academic-api.js`: 로그인 계정에 연결된 학사 API 호출
 - `test/auth.test.js`: 인증 통합 테스트
-- `test/course-persistence.test.js`: ZIP의 과목 저장 시나리오를 현재 학사 API로 통합한 회귀 테스트. 화면용 과목 함수로 추가·수정·전체 삭제하고 계정 분리, 저장 실패 후 기존 데이터 보존, 재로그인 후 빈 목록 유지를 검사합니다.
 
 ## API
 
@@ -50,7 +46,7 @@ npm start
 
 기존 인증 DB는 새 매핑 테이블을 추가해 호환하며 계정·세션을 유지합니다. 개인 DB는 빈 목록·1학년으로 시작합니다. 소유자가 없는 브라우저 공용 `team07.courses`와 기존 학년 저장값은 자동으로 가져오거나 삭제하지 않습니다. 예시 JSON을 개인 과목으로 자동 등록하지 않습니다. 대시보드와 성적 분석은 모두 개인 API만 사용합니다.
 
-개인 데이터 API를 추가할 때는 `await currentUser(req)`로 로그인 사용자를 확인하고 전용 저장소를 사용하세요. 클라이언트의 사용자 ID나 파일명으로 저장소를 선택하면 안 됩니다. 화면의 로그인 여부 확인만으로 데이터 접근을 보호할 수는 없습니다. 현재 서버는 필요한 파일 경로만 명시적으로 공개하므로 새 페이지를 추가할 때 `staticFiles`에도 등록해야 합니다. 공개된 학사 JSON은 예시 데이터이며 실제 계정의 학적·과목 데이터가 아닙니다.
+개인 데이터 API를 추가할 때는 `currentUser(req)`로 로그인 사용자를 확인하고 전용 저장소를 사용하세요. 클라이언트의 사용자 ID나 파일명으로 저장소를 선택하면 안 됩니다. 화면의 로그인 여부 확인만으로 데이터 접근을 보호할 수는 없습니다. 현재 서버는 필요한 파일 경로만 명시적으로 공개하므로 새 페이지를 추가할 때 `staticFiles`에도 등록해야 합니다. 공개된 학사 JSON은 예시 데이터이며 실제 계정의 학적·과목 데이터가 아닙니다.
 
 ## 설정
 
@@ -73,8 +69,6 @@ npm test
 ```
 
 테스트는 임시 DB로 실행하며 회원가입, 중복 방지, 잘못된 비밀번호, 세션 교체, 계정 분리, 재시작 후 유지, 만료, 로그아웃, 출처 검사, IP·계정 요청 제한 및 재시작 후 유지, 비공개 파일 접근 차단, 운영 쿠키 설정, 잘못된 JSON·자료형·과도한 본문, SQL 입력 처리, 중복 쿠키 및 비밀번호 해시 검증을 검사합니다. 학사 데이터는 기존 스키마 갱신, 실제 파일 분리, 과목·학년 저장 및 빈 목록 유지, 다른 사용자 지정 차단, 중복·동시 저장 충돌, 업로드 중 세션 폐기, 계정 ID 재사용 시 과거 DB 재사용 방지도 검사합니다. 화면은 `/login.html`에서 직접 확인할 수 있습니다.
-
-`test/postgres.test.js`는 테스트 전용 PGlite PostgreSQL 엔진으로 동일한 HTTP 경로의 계정·학사 저장·재시작·버전 충돌·요청 제한·업로드 중 세션 폐기와 공개 역할 접근 차단을 검사합니다. TLS 검증 설정과 Render의 DB 누락 차단도 검사합니다. 실제 Supabase 계정이나 네트워크 TLS 연결을 사용하는 테스트는 아닙니다.
 
 인증 DB는 로컬 파일을 보존하면서 Git 추적에서 제외했으며 `storage/`는 `.gitignore`로 보호합니다. 과거 커밋에 포함된 DB는 기존 Git 이력에 남습니다. 그 파일에 실사용자 정보가 있다면 별도의 이력 정리가 필요합니다.
 
