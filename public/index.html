@@ -92,6 +92,30 @@
                 </div>
             </section>
 
+            <!-- 수강 중 학점을 포함한 전체·전공 졸업 잔여 학점 -->
+            <section class="graduation-section" aria-labelledby="graduation-title" aria-describedby="graduation-note">
+                <h2 id="graduation-title">졸업까지 남은 학점</h2>
+                <p id="graduation-note" class="subtitle">전체 학기의 이수 완료 학점과 수강 중 학점을 합산한 예상 잔여 학점입니다. F 과목은 제외하며, 수강 중인 과목은 이수를 가정합니다. 졸업 기준은 예시입니다.</p>
+                <div class="summary-grid graduation-summary" role="status" aria-live="polite" aria-atomic="true">
+                    <article class="summary-card">
+                        <div class="card-heading">
+                            <span>전체 잔여 학점</span>
+                            <span class="card-icon" aria-hidden="true">T</span>
+                        </div>
+                        <strong id="graduation-total-remaining">--</strong>
+                        <p id="graduation-total-requirement">학점</p>
+                    </article>
+                    <article class="summary-card">
+                        <div class="card-heading">
+                            <span>전공 잔여 학점</span>
+                            <span class="card-icon" aria-hidden="true">M</span>
+                        </div>
+                        <strong id="graduation-major-remaining">--</strong>
+                        <p id="graduation-major-requirement">학점</p>
+                    </article>
+                </div>
+            </section>
+
             <section class="menu-section">
                 <h2>주요 기능</h2>
 
@@ -133,10 +157,18 @@
                             <input id="course-name" name="courseName" type="text" required maxlength="100" placeholder="예: 자료구조">
                         </label>
                         <label for="course-credits">학점
-                            <input id="course-credits" name="credits" type="number" required min="0.5" step="0.5" value="3">
+                            <input id="course-credits" name="credits" type="number" required min="0.5" max="30" step="0.5" value="3">
                         </label>
                         <label for="course-semester">학기
-                            <input id="course-semester" name="semester" type="text" required placeholder="예: 2026-1" pattern="[0-9]{4}-[12]" title="2026-1 또는 2026-2 형식으로 입력해 주세요.">
+                        <input
+                            id="course-semester"
+                            name="semester"
+                            type="text"
+                            required
+                            placeholder="예: 2026-1, 2026-여름"
+                            pattern="[0-9]{4}-(1|2|여름|겨울)"
+                            title="YYYY-1, YYYY-2, YYYY-summer, YYYY-winter 형식으로 입력해 주세요."
+                        >
                         </label>
                         <label for="course-category">이수 구분
                             <select id="course-category" name="category">

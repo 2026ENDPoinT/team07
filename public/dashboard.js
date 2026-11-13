@@ -2,6 +2,7 @@
 import { calculateCurrentCredits } from "/js/credits/current.js";
 import { calculateEarnedCredits } from "/js/credits/earned.js";
 import { calculateCompletionCredits } from "/js/credits/completion.js";
+import { calculateGraduationCredits } from "/js/credits/graduation.js";
 import { calculateCumulativeGPA } from "/js/grades/gpa.js";
 import { addCourse, updateCourse, removeCourse, getCourses } from "/js/grades/grades.js";
 import { authRequest } from "/js/auth/api.js";
@@ -14,6 +15,10 @@ const elements = {
     earnedCredits: document.querySelector("#earned-credits"),
     currentCredits: document.querySelector("#current-credits"),
     completionCredits: document.querySelector("#completion-credits"),
+    graduationTotalRemaining: document.querySelector("#graduation-total-remaining"),
+    graduationMajorRemaining: document.querySelector("#graduation-major-remaining"),
+    graduationTotalRequirement: document.querySelector("#graduation-total-requirement"),
+    graduationMajorRequirement: document.querySelector("#graduation-major-requirement"),
     courseList: document.querySelector("#course-list"),
     courseSemesterFilter: document.querySelector("#course-semester-filter"),
     courseCount: document.querySelector("#course-count"),
@@ -221,6 +226,7 @@ function refreshDashboard() {
     const currentCredits = calculateCurrentCredits(courses);
     const earnedCredits = calculateEarnedCredits(courses);
     const gpaResult = calculateCumulativeGPA(courses);
+    const graduationCredits = calculateGraduationCredits(courses, academicRequirements);
 
     const targetYear = Number(userInfo.grade);
 
@@ -243,6 +249,15 @@ function refreshDashboard() {
 
     elements.completionCredits.textContent =
         formatNumber(completionCredits);
+
+    elements.graduationTotalRemaining.textContent =
+        formatNumber(graduationCredits.totalRemainingCredits);
+    elements.graduationMajorRemaining.textContent =
+        formatNumber(graduationCredits.majorRemainingCredits);
+    elements.graduationTotalRequirement.textContent =
+        `학점 · 전체 졸업 기준 ${formatNumber(academicRequirements.graduation.totalCredits)}학점`;
+    elements.graduationMajorRequirement.textContent =
+        `학점 · 전공 졸업 기준 ${formatNumber(academicRequirements.graduation.majorCredits)}학점`;
 
     refreshCourseSemesterFilter();
     renderFilteredCourses();

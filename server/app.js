@@ -23,7 +23,7 @@ const staticFiles = new Map([
   ['/js/dashboard.js', ['public/dashboard.js', 'text/javascript; charset=utf-8']],
   ['/js/grade-analysis.js', ['public/grade-analysis.js', 'text/javascript; charset=utf-8']],
   ...[
-    'credits/current.js', 'credits/earned.js', 'credits/completion.js',
+    'credits/current.js', 'credits/earned.js', 'credits/completion.js', 'credits/graduation.js',
     'grades/grades.js', 'grades/gpa.js',
     'graph/index.js', 'graph/dashboard.js', 'graph/gradeGraph.js', 'graph/gradeRanges.js'
   ].map(file => [`/js/${file}`, [`js/${file}`, 'text/javascript; charset=utf-8']]),
