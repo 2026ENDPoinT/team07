@@ -1,0 +1,167 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENDPoinT | 학업 관리</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <script type="module" src="/js/dashboard.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header class="topbar">
+            <a class="logo" href="/">
+                <span class="logo-icon">E</span>
+                <span>ENDPoinT</span>
+            </a>
+
+            <div class="user-area">
+                <span id="user-name">사용자</span>
+                <button id="logout-button" class="logout-button">
+                    로그아웃
+                </button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <section class="welcome-section">
+                <div>
+                    <p class="eyebrow">ACADEMIC MANAGEMENT SYSTEM</p>
+                    <h1>학업 대시보드</h1>
+                    <p class="subtitle">
+                        나의 학업 현황을 한눈에 확인하세요.
+                    </p>
+                    <p id="data-source" class="subtitle"></p>
+                </div>
+            </section>
+
+            <section class="summary-section" id="credit-section">
+                <h2>학업 현황</h2>
+
+                <div class="summary-grid">
+                    <article class="summary-card" id="gpa-section">
+                        <div class="card-heading">
+                            <span>누적 GPA</span>
+                            <span class="card-icon">G</span>
+                        </div>
+                        <strong id="cumulative-gpa">--</strong>
+                        <p>4.5 만점</p>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="card-heading">
+                            <span>취득 학점</span>
+                            <span class="card-icon">C</span>
+                        </div>
+                        <strong id="earned-credits">--</strong>
+                        <p>학점</p>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="card-heading">
+                            <span>현재 수강 학점</span>
+                            <span class="card-icon">S</span>
+                        </div>
+                        <strong id="current-credits">--</strong>
+                        <p>학점</p>
+                    </article>
+
+                    <article class="summary-card">
+                        <div class="card-heading">
+                            <span>수료 기준 잔여 학점</span>
+                            <span class="card-icon">R</span>
+                        </div>
+                        <strong id="completion-credits">--</strong>
+                        <p>학점</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="menu-section">
+                <h2>주요 기능</h2>
+
+                <div class="menu-grid">
+                    <a href="#course-section" class="menu-card">
+                        <span class="menu-icon">▤</span>
+                        <div>
+                            <h3>과목 관리</h3>
+                            <p>과목 등록 및 성적 조회</p>
+                        </div>
+                        <span class="menu-arrow">→</span>
+                    </a>
+
+                    <a href="#gpa-section" class="menu-card">
+                        <span class="menu-icon">∑</span>
+                        <div>
+                            <h3>GPA 관리</h3>
+                            <p>학기별·누적 평점 확인</p>
+                        </div>
+                        <span class="menu-arrow">→</span>
+                    </a>
+
+                    <a href="#credit-section" class="menu-card">
+                        <span class="menu-icon">▣</span>
+                        <div>
+                            <h3>학점 관리</h3>
+                            <p>취득 및 수료 현황 확인</p>
+                        </div>
+                        <span class="menu-arrow">→</span>
+                    </a>
+
+                    <a href="#graph-section" class="menu-card">
+                        <span class="menu-icon">▥</span>
+                        <div>
+                            <h3>성적 분석</h3>
+                            <p>학기별 그래프 및 성적 구간</p>
+                        </div>
+                        <span class="menu-arrow">→</span>
+                    </a>
+                </div>
+            </section>
+
+            <section class="course-section" id="course-section">
+                <div class="section-heading">
+                    <div>
+                        <h2>과목 현황</h2>
+                        <p>등록된 과목을 확인할 수 있습니다.</p>
+                    </div>
+                </div>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>과목명</th>
+                                <th>학점</th>
+                                <th>성적</th>
+                                <th>학기</th>
+                                <th>상태</th>
+                            </tr>
+                        </thead>
+                        <tbody id="course-list">
+                            <tr>
+                                <td colspan="5" class="empty-message">
+                                    과목 데이터를 불러오는 중입니다.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="graph-section" id="graph-section" aria-label="성적 분석">
+                <p class="subtitle">예시 평가 기준을 사용합니다. 비율을 바꾸면 예상 인원이 갱신됩니다.</p>
+                <div id="grade-dashboard"></div>
+            </section>
+
+            <p id="dashboard-message" class="dashboard-message"
+               role="status" aria-live="polite"></p>
+        </main>
+
+        <footer class="footer">
+            ENDPoinT · Academic Management System
+        </footer>
+    </div>
+</body>
+</html>
