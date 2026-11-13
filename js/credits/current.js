@@ -1,3 +1,5 @@
+import { getEffectiveCourses } from "../grades/grades.js";
+
 //현재 수강학점 계산
 //@param {Array} courses : 과목데이터 배열 
 //@returns {number} 현재 수강학점
@@ -8,9 +10,12 @@ export function calculateCurrentCredits(courses) {
         throw new TypeError("과목 데이터는 배열이어야 합니다.");
     }
 
+    // 재수강 이전 기록 제외
+    const effectiveCourses = getEffectiveCourses(courses);
+
     //filter : 조건이 true인 것만 모아 새 배열 만들기 >> 엄격한 비교 확인 ===
     //currentCourses : filter를 이용해 새로 만들어진 배열 "in_progress" 상태인 객체 모음
-    const currentCourses = courses.filter(
+    const currentCourses = effectiveCourses.filter(
         course => course.status === "in_progress"
     );
 
