@@ -10,7 +10,7 @@ export function calendarMonth(year, month) {
 function requireCalendarMonth(month) {
   if (typeof month !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)
       || calendarMonth(Number(month.slice(0, 4)), Number(month.slice(5))) !== month) {
-    throw new RangeError('지원하는 연도는 1~9999년, 월은 1~12월입니다.');
+    throw new RangeError('지원하는 연도는 1900~2100년, 월은 1~12월입니다.');
   }
 }
 
