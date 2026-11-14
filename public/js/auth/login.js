@@ -46,7 +46,7 @@ $('switch-mode').addEventListener('click', () => {
   $('confirm').value = '';
   $('title').textContent = signup ? '반가워요, 함께 시작해요' : '다시 만나 반가워요';
   $('description').textContent = signup ? '나만의 학업 여정을 만들어 보세요.' : '오늘도 한 걸음, 목표에 가까워질 시간이에요.';
-  $('switch-mode').textContent = signup ? '이미 계정이 있으신가요? 로그인' : '아직 ENDPoinT 계정이 없으신가요? 회원가입';
+  $('switch-mode').textContent = signup ? '이미 계정이 있으신가요? 로그인' : '아직 Simplified 계정이 없으신가요? 회원가입';
   busy(false);
   updatePasswordAdvice();
   message('');
